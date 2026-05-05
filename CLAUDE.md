@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Tauri 2.x desktop application with a React 19 + TypeScript frontend and Rust backend. The project is named "r2-controller" and appears to be a controller application for the Robocon 2026 competition.
 
+## Git Workflow
+
+Commit in logical batches at reasonable checkpoints — don't wait for the whole task to finish, and don't commit every tiny edit. A good commit boundary is a coherent feature/fix/refactor that builds and passes type-check on its own. Split a session's work into multiple commits when it touches unrelated concerns (e.g., backend changes + separate frontend feature). Always verify `bun run build` passes before committing frontend changes; `cargo check` for backend changes.
+
 ## Build Commands
 
 ```bash
