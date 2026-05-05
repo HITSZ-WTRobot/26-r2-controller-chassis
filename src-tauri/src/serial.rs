@@ -1,18 +1,33 @@
-use std::sync::Mutex;
 use std::io::{Read, Write};
 use serialport::{SerialPort, SerialPortType, available_ports};
 
 pub struct SerialManager {
     port: Option<Box<dyn SerialPort>>,
-    write_lock: Mutex<()>,
+}
+
+pub struct SerialReader {
+    port: Box<dyn SerialPort>,
+}
+
+impl SerialReader {
+    pub fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.port.read(buf)
+    }
+}
+
+pub struct SerialWriter {
+    port: Box<dyn SerialPort>,
+}
+
+impl SerialWriter {
+    pub fn write_all(&mut self, data: &[u8]) -> std::io::Result<()> {
+        self.port.write_all(data)
+    }
 }
 
 impl SerialManager {
     pub fn new() -> Self {
-        Self {
-            port: None,
-            write_lock: Mutex::new(()),
-        }
+        Self { port: None }
     }
 
     pub fn connect(&mut self, port_name: &str, baud_rate: u32) -> Result<(), String> {
@@ -28,22 +43,17 @@ impl SerialManager {
         self.port = None;
     }
 
-    pub fn write_frame(&mut self, data: &[u8]) -> Result<(), String> {
-        let _lock = self.write_lock.lock().map_err(|e| e.to_string())?;
-        if let Some(ref mut port) = self.port {
-            port.write(data).map_err(|e| e.to_string())?;
-            Ok(())
-        } else {
-            Err("Not connected".to_string())
-        }
-    }
-
-    pub fn read_bytes(&mut self, buf: &mut [u8]) -> Result<usize, String> {
-        if let Some(ref mut port) = self.port {
-            port.read(buf).map_err(|e| e.to_string())
-        } else {
-            Err("Not connected".to_string())
-        }
+    /// Produce independent reader/writer handles backed by OS-level clones of
+    /// the port. Reader and writer can run on separate threads without stalling
+    /// each other.
+    pub fn split(&self) -> Result<(SerialReader, SerialWriter), String> {
+        let port = self.port.as_ref().ok_or_else(|| "Not connected".to_string())?;
+        let reader_port = port.try_clone().map_err(|e| e.to_string())?;
+        let writer_port = port.try_clone().map_err(|e| e.to_string())?;
+        Ok((
+            SerialReader { port: reader_port },
+            SerialWriter { port: writer_port },
+        ))
     }
 }
 
