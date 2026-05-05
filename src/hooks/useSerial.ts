@@ -77,8 +77,11 @@ export function useRobotState() {
 
 export function useCommand() {
   const send = useCallback(async (cmd: Command) => {
+    const { type, ...rest } = cmd;
+    const hasFields = Object.keys(rest).length > 0;
+    const payload = hasFields ? { [type]: rest } : type;
     try {
-      await invoke('send_command', { cmd });
+      await invoke('send_command', { cmd: payload });
     } catch (e) {
       console.error(`Failed to send ${cmd.type}:`, e);
       throw e;
