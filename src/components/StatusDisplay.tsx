@@ -4,44 +4,41 @@ interface StatusDisplayProps {
   state: RobotState | null;
 }
 
-export function StatusDisplay({ state }: StatusDisplayProps) {
-  if (!state) {
-    return (
-      <div className="bg-white rounded-lg shadow p-4">
-        <h2 className="text-lg font-semibold mb-4">Robot Status</h2>
-        <p className="text-gray-500">Waiting for data...</p>
-      </div>
-    );
-  }
+const FIELDS = [
+  { key: 'x', label: 'X', unit: 'm', format: (v: number) => v.toFixed(3) },
+  { key: 'y', label: 'Y', unit: 'm', format: (v: number) => v.toFixed(3) },
+  { key: 'yaw', label: '航向角', unit: '°', format: (v: number) => v.toFixed(2) },
+  { key: 'front_height', label: '前高度', unit: 'm', format: (v: number) => v.toFixed(3) },
+  { key: 'rear_height', label: '后高度', unit: 'm', format: (v: number) => v.toFixed(3) },
+  { key: 'timestamp', label: '时间戳', unit: '', format: (v: number) => String(v) },
+] as const;
 
+export function StatusDisplay({ state }: StatusDisplayProps) {
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <h2 className="text-lg font-semibold mb-4">Robot Status</h2>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gray-50 p-3 rounded">
-          <span className="text-sm text-gray-500 block">X</span>
-          <span className="font-mono font-semibold">{state.x.toFixed(3)} m</span>
-        </div>
-        <div className="bg-gray-50 p-3 rounded">
-          <span className="text-sm text-gray-500 block">Y</span>
-          <span className="font-mono font-semibold">{state.y.toFixed(3)} m</span>
-        </div>
-        <div className="bg-gray-50 p-3 rounded">
-          <span className="text-sm text-gray-500 block">Yaw</span>
-          <span className="font-mono font-semibold">{state.yaw.toFixed(2)}°</span>
-        </div>
-        <div className="bg-gray-50 p-3 rounded">
-          <span className="text-sm text-gray-500 block">Front Height</span>
-          <span className="font-mono font-semibold">{state.front_height.toFixed(3)} m</span>
-        </div>
-        <div className="bg-gray-50 p-3 rounded">
-          <span className="text-sm text-gray-500 block">Rear Height</span>
-          <span className="font-mono font-semibold">{state.rear_height.toFixed(3)} m</span>
-        </div>
-        <div className="bg-gray-50 p-3 rounded">
-          <span className="text-sm text-gray-500 block">Timestamp</span>
-          <span className="font-mono font-semibold">{state.timestamp}</span>
-        </div>
+    <div className="bg-surface rounded-lg shadow p-4 border border-border">
+      <h2 className="text-lg font-semibold mb-4 text-text">机器人状态</h2>
+      <div className="grid grid-cols-2 gap-3">
+        {FIELDS.map((f) => {
+          const value = state ? state[f.key] as number : null;
+          return (
+            <div
+              key={f.key}
+              className={`p-3 rounded border border-border ${state ? 'bg-bg' : 'bg-bg/50'}`}
+            >
+              <span className="text-sm text-text-secondary block">{f.label}</span>
+              {value === null ? (
+                <span className="font-mono font-semibold text-text-secondary inline-block">
+                  <span className="inline-block w-16 h-4 rounded bg-border animate-pulse align-middle" />
+                  {f.unit && <span className="ml-1 align-middle">{f.unit}</span>}
+                </span>
+              ) : (
+                <span className="font-mono font-semibold text-text">
+                  {f.format(value)}{f.unit && ` ${f.unit}`}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

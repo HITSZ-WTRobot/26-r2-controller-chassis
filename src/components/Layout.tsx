@@ -2,7 +2,9 @@ import { ConnectionPanel } from './ConnectionPanel';
 import { StatusDisplay } from './StatusDisplay';
 import { ActionStatePanel } from './ActionStatePanel';
 import { ConnectionMap } from './ConnectionMap';
-import { ChassisControl, HeightControl, StepControl, GripControl } from './ControlPanel';
+import { HeightControl, StepControl, GripControl, SystemControl } from './ControlPanel';
+import { WasdVelocityControl } from './WasdVelocityControl';
+import { Tabs } from './Tabs';
 import type { RobotState } from '../types/robot';
 
 interface LayoutProps {
@@ -10,38 +12,51 @@ interface LayoutProps {
 }
 
 export function Layout({ state }: LayoutProps) {
-  return (
-    <div className="min-h-screen bg-gray-100 p-4">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold">R2 Controller</h1>
-        <p className="text-gray-600">Robocon 2026 Independent Lift Mecanum Chassis</p>
-      </header>
-
-      <div className="grid grid-cols-12 gap-4">
-        {/* Left column - Connection */}
-        <div className="col-span-3">
-          <ConnectionPanel />
-        </div>
-
-        {/* Middle column - Status */}
-        <div className="col-span-5">
-          <StatusDisplay state={state} />
-          <div className="mt-4">
-            <ActionStatePanel actionState={state?.action_state ?? null} />
-          </div>
-        </div>
-
-        {/* Right column - Connection Map */}
-        <div className="col-span-4">
-          <ConnectionMap connectionState={state?.connection_state ?? null} />
-        </div>
-
-        {/* Bottom - Control Panels */}
-        <div className="col-span-12 grid grid-cols-4 gap-4 mt-4">
-          <ChassisControl />
+  const tabs = [
+    {
+      id: 'chassis',
+      label: '底盘控制',
+      content: (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <WasdVelocityControl />
           <HeightControl />
-          <StepControl />
-          <GripControl />
+        </div>
+      ),
+    },
+    {
+      id: 'step',
+      label: '台阶控制',
+      content: <StepControl />,
+    },
+    {
+      id: 'grip',
+      label: '夹爪控制',
+      content: <GripControl />,
+    },
+    {
+      id: 'system',
+      label: '系统',
+      content: <SystemControl />,
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-bg p-3 sm:p-4">
+      <div className="mx-auto max-w-7xl">
+        <header className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-text">R2 控制端</h1>
+          <p className="text-sm text-text-secondary">Robocon 2026 独立升降麦轮底盘</p>
+        </header>
+
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+            <ConnectionPanel />
+            <StatusDisplay state={state} />
+            <ActionStatePanel actionState={state?.action_state ?? null} />
+            <ConnectionMap connectionState={state?.connection_state ?? null} />
+          </div>
+
+          <Tabs tabs={tabs} defaultTab="chassis" />
         </div>
       </div>
     </div>

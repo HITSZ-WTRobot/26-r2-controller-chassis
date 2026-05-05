@@ -1,1 +1,82 @@
 @import "tailwindcss";
+
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-warning: var(--warning);
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --text: #111827;
+  --text-secondary: #6b7280;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --success: #16a34a;
+  --success-bg: #dcfce7;
+  --danger: #dc2626;
+  --danger-bg: #fee2e2;
+  --warning: #ca8a04;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #111827;
+    --surface: #1f2937;
+    --border: #374151;
+    --text: #f9fafb;
+    --text-secondary: #9ca3af;
+    --primary: #60a5fa;
+    --primary-hover: #3b82f6;
+    --success: #22c55e;
+    --success-bg: #14532d;
+    --danger: #ef4444;
+    --danger-bg: #7f1d1d;
+    --warning: #eab308;
+  }
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+select {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+select option {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+.bg-surface { background-color: var(--surface); }
+.bg-bg { background-color: var(--bg); }
+.border-border { border-color: var(--border); }
+.text-text { color: var(--text); }
+.text-text-secondary { color: var(--text-secondary); }
+.text-primary { color: var(--primary); }
+.bg-primary { background-color: var(--primary); }
+.hover\:bg-primary-hover:hover { background-color: var(--primary-hover); }
+.bg-success { background-color: var(--success); }
+.bg-success-bg { background-color: var(--success-bg); }
+.text-success { color: var(--success); }
+.bg-danger { background-color: var(--danger); }
+.bg-danger-bg { background-color: var(--danger-bg); }
+.text-danger { color: var(--danger); }
+.bg-warning { background-color: var(--warning); }
+.bg-border { background-color: var(--border); }

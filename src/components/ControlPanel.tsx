@@ -1,119 +1,142 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useCommand } from '../hooks/useSerial';
+import { VerticalSlider } from './VerticalSlider';
 
-export function ChassisControl() {
-  const { send } = useCommand();
-  const [vx, setVx] = useState(0);
-  const [vy, setVy] = useState(0);
-  const [wz, setWz] = useState(0);
+const HEIGHT_MIN = 0.195;
+const HEIGHT_MAX = 0.595;
+const HEIGHT_STEP = 0.005;
+const LINK_MODE_PREVIOUS_CURVE = 2;
+const SEND_THROTTLE_MS = 40;
 
-  const handleSendVelocity = async () => {
-    await send({ type: 'SetMasterChassisVelocity', vx, vy, wz });
-  };
-
-  return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <h3 className="text-md font-semibold mb-3">Chassis Velocity Control</h3>
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2">
-          <label className="w-20 text-sm">VX (m/s)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={vx}
-            onChange={(e) => setVx(parseFloat(e.target.value) || 0)}
-            className="border rounded px-2 py-1 w-24"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="w-20 text-sm">VY (m/s)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={vy}
-            onChange={(e) => setVy(parseFloat(e.target.value) || 0)}
-            className="border rounded px-2 py-1 w-24"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="w-20 text-sm">WZ (deg/s)</label>
-          <input
-            type="number"
-            step="0.1"
-            value={wz}
-            onChange={(e) => setWz(parseFloat(e.target.value) || 0)}
-            className="border rounded px-2 py-1 w-24"
-          />
-        </div>
-      </div>
-      <button
-        onClick={handleSendVelocity}
-        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-      >
-        Send Velocity
-      </button>
-    </div>
-  );
-}
+const LIFT_V_DEFAULT = 1.0;
+const LIFT_V_MAX_LIMIT = 1.178;
+const LIFT_A_DEFAULT = 5.0;
+const LIFT_A_MAX_LIMIT = 5.0;
 
 export function HeightControl() {
   const { send } = useCommand();
-  const [height, setHeight] = useState(0);
-  const [vMax, setVMax] = useState(0);
-  const [aMax, setAMax] = useState(0);
+  const [height, setHeight] = useState(HEIGHT_MIN);
+  const [vMax, setVMax] = useState(LIFT_V_DEFAULT);
+  const [aMax, setAMax] = useState(LIFT_A_DEFAULT);
 
-  const handleSetHeight = async () => {
-    await send({
-      type: 'SetChassisHeight',
-      height,
-      v_max: vMax,
-      a_max: aMax,
-      j_max: 0,
-      link_mode: 1,
-    });
+  const lastSendTs = useRef(0);
+  const pendingTimer = useRef<number | null>(null);
+  const latestParams = useRef({ height: HEIGHT_MIN, vMax: LIFT_V_DEFAULT, aMax: LIFT_A_DEFAULT });
+
+  const clamp = (v: number) => Math.min(HEIGHT_MAX, Math.max(HEIGHT_MIN, v));
+  const clampRange = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+  const doSend = useCallback(async () => {
+    lastSendTs.current = Date.now();
+    const { height, vMax, aMax } = latestParams.current;
+    try {
+      await send({
+        type: 'SetChassisHeight',
+        height,
+        v_max: vMax,
+        a_max: aMax,
+        j_max: 0,
+        link_mode: LINK_MODE_PREVIOUS_CURVE,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }, [send]);
+
+  const scheduleSend = useCallback(() => {
+    const now = Date.now();
+    const elapsed = now - lastSendTs.current;
+    if (pendingTimer.current !== null) {
+      window.clearTimeout(pendingTimer.current);
+      pendingTimer.current = null;
+    }
+    if (elapsed >= SEND_THROTTLE_MS) {
+      doSend();
+    } else {
+      pendingTimer.current = window.setTimeout(() => {
+        pendingTimer.current = null;
+        doSend();
+      }, SEND_THROTTLE_MS - elapsed);
+    }
+  }, [doSend]);
+
+  const handleHeightChange = (v: number) => {
+    const c = clamp(v);
+    setHeight(c);
+    latestParams.current.height = c;
+    scheduleSend();
   };
 
+  const handleVMaxChange = (v: number) => {
+    const c = clampRange(v, 0, LIFT_V_MAX_LIMIT);
+    setVMax(c);
+    latestParams.current.vMax = c;
+  };
+
+  const handleAMaxChange = (v: number) => {
+    const c = clampRange(v, 0, LIFT_A_MAX_LIMIT);
+    setAMax(c);
+    latestParams.current.aMax = c;
+  };
+
+  const pct = ((height - HEIGHT_MIN) / (HEIGHT_MAX - HEIGHT_MIN)) * 100;
+
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <h3 className="text-md font-semibold mb-3">Chassis Height Control</h3>
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2">
-          <label className="w-24 text-sm">Height (m)</label>
-          <input
-            type="number"
-            step="0.01"
+    <div className="space-y-4">
+      <h3 className="text-md font-semibold text-text">底盘高度控制 (即时生效)</h3>
+      <div className="flex gap-4 items-stretch">
+        <div className="flex flex-col items-center gap-2 shrink-0 py-1">
+          <span className="text-xs text-text-secondary font-mono">{HEIGHT_MAX.toFixed(3)}</span>
+          <VerticalSlider
             value={height}
-            onChange={(e) => setHeight(parseFloat(e.target.value) || 0)}
-            className="border rounded px-2 py-1 w-24"
+            min={HEIGHT_MIN}
+            max={HEIGHT_MAX}
+            step={HEIGHT_STEP}
+            onChange={handleHeightChange}
+            height={224}
           />
+          <span className="text-xs text-text-secondary font-mono">{HEIGHT_MIN.toFixed(3)}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="w-24 text-sm">V-Max (m/s)</label>
-          <input
-            type="number"
-            step="0.01"
+
+        <div className="flex-1 space-y-3">
+          <div>
+            <label className="text-sm text-text-secondary block mb-1">
+              当前高度 <span className="font-mono text-text">{height.toFixed(3)} m</span>
+              <span className="ml-2 text-text-secondary">({pct.toFixed(0)}%)</span>
+            </label>
+            <input
+              type="number"
+              step={HEIGHT_STEP}
+              min={HEIGHT_MIN}
+              max={HEIGHT_MAX}
+              value={height}
+              onChange={(e) => handleHeightChange(parseFloat(e.target.value) || HEIGHT_MIN)}
+              className="w-full border border-border rounded px-2 py-1 bg-surface text-text"
+            />
+          </div>
+          <SliderRow
+            label="最大速度"
+            unit="m/s"
             value={vMax}
-            onChange={(e) => setVMax(parseFloat(e.target.value) || 0)}
-            className="border rounded px-2 py-1 w-24"
+            onChange={handleVMaxChange}
+            min={0}
+            max={LIFT_V_MAX_LIMIT}
+            step={0.01}
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="w-24 text-sm">A-Max (m/s²)</label>
-          <input
-            type="number"
-            step="0.01"
+          <SliderRow
+            label="最大加速度"
+            unit="m/s²"
             value={aMax}
-            onChange={(e) => setAMax(parseFloat(e.target.value) || 0)}
-            className="border rounded px-2 py-1 w-24"
+            onChange={handleAMaxChange}
+            min={0}
+            max={LIFT_A_MAX_LIMIT}
+            step={0.05}
           />
         </div>
       </div>
-      <button
-        onClick={handleSetHeight}
-        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-      >
-        Set Height
-      </button>
+      <p className="text-xs text-text-secondary">
+        高度 {HEIGHT_MIN}–{HEIGHT_MAX} m · 速度上限 {LIFT_V_MAX_LIMIT} m/s · 加速度上限 {LIFT_A_MAX_LIMIT} m/s² · link_mode = PreviousCurve
+      </p>
     </div>
   );
 }
@@ -132,86 +155,290 @@ export function StepControl() {
     await send({ type: 'StepDown', start_distance: startDist, end_distance: endDist, direction, should_reset: 1 });
   };
 
+  const handleStepUpResume = async () => {
+    await send({ type: 'StepUpResume' });
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <h3 className="text-md font-semibold mb-3">Step Control</h3>
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2">
-          <label className="w-24 text-sm">Start Dist (m)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={startDist}
-            onChange={(e) => setStartDist(parseFloat(e.target.value) || 0)}
-            className="border rounded px-2 py-1 w-24"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="w-24 text-sm">End Dist (m)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={endDist}
-            onChange={(e) => setEndDist(parseFloat(e.target.value) || 0)}
-            className="border rounded px-2 py-1 w-24"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="w-24 text-sm">Direction</label>
-          <select
+    <div className="space-y-4">
+      <h3 className="text-md font-semibold text-text">台阶控制</h3>
+      <div className="space-y-3">
+        <InputRow label="起始距离 (m)" value={startDist} onChange={setStartDist} step={0.01} />
+        <InputRow label="结束距离 (m)" value={endDist} onChange={setEndDist} step={0.01} />
+        <div>
+          <label className="text-sm text-text-secondary block mb-1">方向</label>
+          <RadioGroup
             value={direction}
-            onChange={(e) => setDirection(parseInt(e.target.value))}
-            className="border rounded px-2 py-1 w-24"
-          >
-            <option value={0}>Forward</option>
-            <option value={1}>Backward</option>
-          </select>
+            onChange={setDirection}
+            options={[
+              { value: 0, label: '前进' },
+              { value: 1, label: '后退' },
+            ]}
+          />
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <button
           onClick={handleStepUp}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          className="bg-primary text-white px-3 py-2 rounded hover:bg-primary-hover text-sm"
         >
-          Step Up
+          登上
         </button>
         <button
           onClick={handleStepDown}
-          className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+          className="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 text-sm"
         >
-          Step Down
+          走下
+        </button>
+        <button
+          onClick={handleStepUpResume}
+          className="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 text-sm"
+        >
+          继续登
         </button>
       </div>
     </div>
   );
 }
 
+type TakeSpearMode = 'byId' | 'byPos';
+
 export function GripControl() {
   const { send } = useCommand();
+  const [mode, setMode] = useState<TakeSpearMode>('byId');
+
+  const [spearId, setSpearId] = useState(0);
+  const [targetX, setTargetX] = useState(0);
+  const [targetY, setTargetY] = useState(0);
+  const [targetYaw, setTargetYaw] = useState(0);
+  const [endX, setEndX] = useState(0);
+  const [endY, setEndY] = useState(0);
+  const [endYaw, setEndYaw] = useState(0);
+
+  const handleTake = async () => {
+    if (mode === 'byId') {
+      await send({
+        type: 'TakeSpearById',
+        spear_id: spearId,
+        end_x: endX,
+        end_y: endY,
+        end_yaw: endYaw,
+      });
+    } else {
+      await send({
+        type: 'TakeSpear',
+        target_x: targetX,
+        target_y: targetY,
+        target_yaw: targetYaw,
+        end_x: endX,
+        end_y: endY,
+        end_yaw: endYaw,
+      });
+    }
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <h3 className="text-md font-semibold mb-3">Grip Control</h3>
-      <div className="flex gap-2 flex-wrap">
+    <div className="space-y-4">
+      <h3 className="text-md font-semibold text-text">夹爪控制</h3>
+
+      <div>
+        <label className="text-sm text-text-secondary block mb-1">取矛协议</label>
+        <RadioGroup
+          value={mode}
+          onChange={(v) => setMode(v)}
+          options={[
+            { value: 'byId', label: '按编号 (0x41)' },
+            { value: 'byPos', label: '按坐标 (0x40)' },
+          ]}
+        />
+      </div>
+
+      {mode === 'byId' ? (
+        <div>
+          <label className="text-sm text-text-secondary block mb-1">矛编号</label>
+          <RadioGroup
+            value={spearId}
+            onChange={setSpearId}
+            options={[0, 1, 2, 3, 4, 5].map((id) => ({ value: id, label: String(id) }))}
+          />
+        </div>
+      ) : (
+        <div>
+          <label className="text-sm text-text-secondary block mb-1">目标位姿</label>
+          <div className="grid grid-cols-3 gap-2">
+            <NumField label="X (m)" step={0.01} value={targetX} onChange={setTargetX} />
+            <NumField label="Y (m)" step={0.01} value={targetY} onChange={setTargetY} />
+            <NumField label="Yaw (°)" step={0.1} value={targetYaw} onChange={setTargetYaw} />
+          </div>
+        </div>
+      )}
+
+      <div>
+        <label className="text-sm text-text-secondary block mb-1">终点位姿</label>
+        <div className="grid grid-cols-3 gap-2">
+          <NumField label="X (m)" step={0.01} value={endX} onChange={setEndX} />
+          <NumField label="Y (m)" step={0.01} value={endY} onChange={setEndY} />
+          <NumField label="Yaw (°)" step={0.1} value={endYaw} onChange={setEndYaw} />
+        </div>
+      </div>
+
+      <button
+        onClick={handleTake}
+        className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full"
+      >
+        取矛
+      </button>
+
+      <div className="border-t border-border pt-3 grid grid-cols-2 gap-2">
         <button
           onClick={() => send({ type: 'StoreKFS' })}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover"
         >
-          Store KFS
+          存储 KFS
         </button>
         <button
           onClick={() => send({ type: 'ReleaseKFS' })}
           className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
         >
-          Release KFS
-        </button>
-        <button
-          onClick={() => send({ type: 'StepUpResume' })}
-          className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-        >
-          Step Up Resume
+          释放 KFS
         </button>
       </div>
+    </div>
+  );
+}
+
+export function SystemControl() {
+  const { send } = useCommand();
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-md font-semibold text-text">系统控制</h3>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => send({ type: 'Ping' })}
+          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover"
+        >
+          Ping
+        </button>
+        <button
+          onClick={() => send({ type: 'StopChassis' })}
+          className="bg-danger text-white px-4 py-2 rounded hover:opacity-90"
+        >
+          紧急停止
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface InputRowProps {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  step: number;
+}
+
+function InputRow({ label, value, onChange, step }: InputRowProps) {
+  return (
+    <div className="flex items-center gap-2">
+      <label className="flex-1 text-sm text-text-secondary">{label}</label>
+      <input
+        type="number"
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        className="border border-border rounded px-2 py-1 w-28 bg-surface text-text"
+      />
+    </div>
+  );
+}
+
+interface NumFieldProps {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  step: number;
+}
+
+function NumField({ label, value, onChange, step }: NumFieldProps) {
+  return (
+    <div>
+      <label className="text-xs text-text-secondary block mb-1">{label}</label>
+      <input
+        type="number"
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        className="w-full border border-border rounded px-2 py-1 bg-surface text-text"
+      />
+    </div>
+  );
+}
+
+interface SliderRowProps {
+  label: string;
+  unit: string;
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  step: number;
+}
+
+function SliderRow({ label, unit, value, onChange, min, max, step }: SliderRowProps) {
+  const clamp = (v: number) => Math.min(max, Math.max(min, v));
+  return (
+    <div>
+      <div className="flex justify-between mb-1">
+        <label className="text-sm text-text-secondary">
+          {label} ({unit})
+        </label>
+        <input
+          type="number"
+          step={step}
+          min={min}
+          max={max}
+          value={value}
+          onChange={(e) => onChange(clamp(parseFloat(e.target.value) || 0))}
+          className="w-20 border border-border rounded px-2 py-0.5 text-sm bg-surface text-text text-right"
+        />
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="w-full accent-primary"
+      />
+    </div>
+  );
+}
+
+interface RadioGroupProps<T extends string | number> {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
+}
+
+function RadioGroup<T extends string | number>({ value, onChange, options }: RadioGroupProps<T>) {
+  return (
+    <div className="inline-flex flex-wrap rounded border border-border overflow-hidden">
+      {options.map((opt) => (
+        <button
+          key={String(opt.value)}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className={`px-3 py-1 text-sm transition-colors border-r border-border last:border-r-0 ${
+            value === opt.value
+              ? 'bg-primary text-white'
+              : 'bg-surface text-text hover:bg-bg'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   );
 }
