@@ -5,6 +5,7 @@ import { ConnectionMap } from './ConnectionMap';
 import { HeightControl, StepControl, GripControl, SystemControl } from './ControlPanel';
 import { WasdVelocityControl } from './WasdVelocityControl';
 import { Tabs } from './Tabs';
+import { SerialDebugger } from './SerialDebugger';
 import type { RobotState } from '../types/robot';
 
 interface LayoutProps {
@@ -42,13 +43,13 @@ export function Layout({ state }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-bg p-3 sm:p-4">
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold text-text">R2 控制端</h1>
-          <p className="text-sm text-text-secondary">Robocon 2026 独立升降麦轮底盘</p>
-        </header>
+      <div className="mx-auto max-w-[1600px] flex flex-col xl:flex-row gap-4">
+        <div className="flex-1 min-w-0 flex flex-col gap-4">
+          <header>
+            <h1 className="text-xl sm:text-2xl font-bold text-text">R2 控制端</h1>
+            <p className="text-sm text-text-secondary">Robocon 2026 独立升降麦轮底盘</p>
+          </header>
 
-        <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
             <ConnectionPanel />
             <StatusDisplay state={state} />
@@ -58,6 +59,10 @@ export function Layout({ state }: LayoutProps) {
 
           <Tabs tabs={tabs} defaultTab="chassis" />
         </div>
+
+        <aside className="hidden xl:flex xl:flex-col w-96 shrink-0 sticky top-4 self-start max-h-[calc(100vh-2rem)]">
+          <SerialDebugger />
+        </aside>
       </div>
     </div>
   );

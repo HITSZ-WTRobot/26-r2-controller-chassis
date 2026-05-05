@@ -64,6 +64,7 @@ fn connect_serial(
                                             let frame_data = &buf[start..start+22];
                                             match protocol::FeedbackFrame::parse(frame_data) {
                                                 Ok(frame) => {
+                                                    let _ = app_handle.emit("serial_rx", frame_data);
                                                     let rs = RobotState::from_feedback(&frame);
                                                     let _ = app_handle.emit("robot_state_update", &rs);
                                                     start += 22;
@@ -112,7 +113,7 @@ fn disconnect_serial(state: State<AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn send_command(cmd: Command, state: State<AppState>) -> Result<(), String> {
+fn send_command(cmd: Command, state: State<AppState>, app_handle: AppHandle) -> Result<(), String> {
     let timestamp = {
         let mut counter = state.timestamp_counter.lock().map_err(|e| e.to_string())?;
         let ts = *counter;
@@ -121,6 +122,8 @@ fn send_command(cmd: Command, state: State<AppState>) -> Result<(), String> {
     };
 
     let data = cmd.encode(timestamp);
+
+    let _ = app_handle.emit("serial_tx", &data);
 
     let tx = state.tx.lock().map_err(|e| e.to_string())?;
     if let Some(ref sender) = *tx {
@@ -149,13 +152,13 @@ fn list_serial_ports() -> Vec<PortInfo> {
 }
 
 #[tauri::command]
-fn ping(state: State<AppState>) -> Result<(), String> {
-    send_command(Command::Ping, state)
+fn ping(state: State<AppState>, app_handle: AppHandle) -> Result<(), String> {
+    send_command(Command::Ping, state, app_handle)
 }
 
 #[tauri::command]
-fn stop_chassis(state: State<AppState>) -> Result<(), String> {
-    send_command(Command::StopChassis, state)
+fn stop_chassis(state: State<AppState>, app_handle: AppHandle) -> Result<(), String> {
+    send_command(Command::StopChassis, state, app_handle)
 }
 
 #[tauri::command]
@@ -166,8 +169,9 @@ fn set_chassis_height(
     j_max: f32,
     link_mode: u16,
     state: State<AppState>,
+    app_handle: AppHandle,
 ) -> Result<(), String> {
-    send_command(Command::SetChassisHeight { height, v_max, a_max, j_max, link_mode }, state)
+    send_command(Command::SetChassisHeight { height, v_max, a_max, j_max, link_mode }, state, app_handle)
 }
 
 #[tauri::command]
@@ -175,45 +179,50 @@ fn set_master_chassis_target_current_state(
     x: f32, y: f32, yaw: f32,
     xy_vmax: f32, xy_amax: f32, yaw_vmax: f32, yaw_amax: f32,
     state: State<AppState>,
+    app_handle: AppHandle,
 ) -> Result<(), String> {
-    send_command(Command::SetMasterChassisTargetCurrentState { x, y, yaw, xy_vmax, xy_amax, yaw_vmax, yaw_amax }, state)
+    send_command(Command::SetMasterChassisTargetCurrentState { x, y, yaw, xy_vmax, xy_amax, yaw_vmax, yaw_amax }, state, app_handle)
 }
 
 #[tauri::command]
 fn set_master_chassis_velocity(
     vx: f32, vy: f32, wz: f32,
     state: State<AppState>,
+    app_handle: AppHandle,
 ) -> Result<(), String> {
-    send_command(Command::SetMasterChassisVelocity { vx, vy, wz }, state)
+    send_command(Command::SetMasterChassisVelocity { vx, vy, wz }, state, app_handle)
 }
 
 #[tauri::command]
 fn send_lidar_posture(
     x: f32, y: f32, yaw: f32, lidar_timestamp: u32,
     state: State<AppState>,
+    app_handle: AppHandle,
 ) -> Result<(), String> {
-    send_command(Command::LidarPosture { x, y, yaw, lidar_timestamp }, state)
+    send_command(Command::LidarPosture { x, y, yaw, lidar_timestamp }, state, app_handle)
 }
 
 #[tauri::command]
 fn step_up(
     start_distance: f32, end_distance: f32, direction: u16, will_take: u16,
     state: State<AppState>,
+    app_handle: AppHandle,
 ) -> Result<(), String> {
-    send_command(Command::StepUp { start_distance, end_distance, direction, will_take }, state)
+    send_command(Command::StepUp { start_distance, end_distance, direction, will_take }, state, app_handle)
 }
 
 #[tauri::command]
-fn step_up_resume(state: State<AppState>) -> Result<(), String> {
-    send_command(Command::StepUpResume, state)
+fn step_up_resume(state: State<AppState>, app_handle: AppHandle) -> Result<(), String> {
+    send_command(Command::StepUpResume, state, app_handle)
 }
 
 #[tauri::command]
 fn step_down(
     start_distance: f32, end_distance: f32, direction: u16, should_reset: u16,
     state: State<AppState>,
+    app_handle: AppHandle,
 ) -> Result<(), String> {
-    send_command(Command::StepDown { start_distance, end_distance, direction, should_reset }, state)
+    send_command(Command::StepDown { start_distance, end_distance, direction, should_reset }, state, app_handle)
 }
 
 #[tauri::command]
@@ -221,26 +230,28 @@ fn take_spear(
     target_x: f32, target_y: f32, target_yaw: f32,
     end_x: f32, end_y: f32, end_yaw: f32,
     state: State<AppState>,
+    app_handle: AppHandle,
 ) -> Result<(), String> {
-    send_command(Command::TakeSpear { target_x, target_y, target_yaw, end_x, end_y, end_yaw }, state)
+    send_command(Command::TakeSpear { target_x, target_y, target_yaw, end_x, end_y, end_yaw }, state, app_handle)
 }
 
 #[tauri::command]
 fn take_spear_by_id(
     spear_id: u16, end_x: f32, end_y: f32, end_yaw: f32,
     state: State<AppState>,
+    app_handle: AppHandle,
 ) -> Result<(), String> {
-    send_command(Command::TakeSpearById { spear_id, end_x, end_y, end_yaw }, state)
+    send_command(Command::TakeSpearById { spear_id, end_x, end_y, end_yaw }, state, app_handle)
 }
 
 #[tauri::command]
-fn store_kfs(state: State<AppState>) -> Result<(), String> {
-    send_command(Command::StoreKFS, state)
+fn store_kfs(state: State<AppState>, app_handle: AppHandle) -> Result<(), String> {
+    send_command(Command::StoreKFS, state, app_handle)
 }
 
 #[tauri::command]
-fn release_kfs(state: State<AppState>) -> Result<(), String> {
-    send_command(Command::ReleaseKFS, state)
+fn release_kfs(state: State<AppState>, app_handle: AppHandle) -> Result<(), String> {
+    send_command(Command::ReleaseKFS, state, app_handle)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
