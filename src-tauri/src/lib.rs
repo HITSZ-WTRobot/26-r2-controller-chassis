@@ -5,10 +5,10 @@ mod state;
 
 use std::sync::Mutex;
 use tokio::sync::mpsc;
-use tauri::{AppHandle, Emitter, State, Manager};
+use tauri::{AppHandle, Emitter, State, Manager, Listener};
 use commands::Command;
 use state::{RobotState, ConnectionStatus};
-use serial::{SerialManager, list_ports, PortInfo};
+use serial::{SerialManager, PortInfo};
 
 struct AppState {
     serial: Mutex<SerialManager>,
@@ -25,31 +25,25 @@ fn connect_serial(
     state: State<AppState>,
     app_handle: AppHandle,
 ) -> Result<(), String> {
-    let mut serial = state.serial.lock().map_err(|e| e.to_string())?;
-    serial.connect(&port, baud)?;
-
-    let (tx, rx) = mpsc::channel::<Vec<u8>>(100);
     {
-        let mut tx_guard = state.tx.lock().map_err(|e| e.to_string())?;
-        *tx_guard = Some(tx);
+        let mut serial = state.serial.lock().map_err(|e| e.to_string())?;
+        serial.connect(&port, baud)?;
     }
 
-    let serial_clone = SerialManager::new();
     let port_clone = port.clone();
-    let baud_clone = baud.clone();
+    let baud_clone = baud;
 
     std::thread::spawn(move || {
-        // Note: in production, use tokio::spawn with proper async runtime
-        // For now, spawn a blocking task
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let mut s = SerialManager::new();
             if s.connect(&port_clone, baud_clone).is_ok() {
-                let (tx, mut rx) = mpsc::channel::<Vec<u8>>(100);
+                let (_tx, mut rx) = mpsc::channel::<Vec<u8>>(100);
                 let _ = app_handle.emit("connection_status", "connected");
-                // Run loop
+
                 let mut buf = vec![0u8; 256];
                 let mut pos = 0;
+
                 loop {
                     tokio::select! {
                         Some(data) = rx.recv() => {
@@ -63,6 +57,7 @@ fn connect_serial(
                                 Ok(n) if n > 0 => {
                                     buf[pos..pos+n].copy_from_slice(&temp_buf[..n]);
                                     pos += n;
+
                                     let mut start = 0;
                                     while start + 22 <= pos {
                                         if buf[start] == 0xAA && buf[start+1] == 0xBB {
@@ -81,10 +76,15 @@ fn connect_serial(
                                             start += 1;
                                         }
                                     }
+
                                     if start > 0 && start < pos {
-                                        buf.copy_from_slice(&buf[start..pos]);
+                                        // Copy remaining bytes to beginning of buffer
+                                        let remaining = pos - start;
+                                        buf.copy_within(start..pos, 0);
+                                        pos = remaining;
+                                    } else if start > 0 {
+                                        pos = 0;
                                     }
-                                    pos -= start;
                                 }
                                 _ => {}
                             }
@@ -95,7 +95,8 @@ fn connect_serial(
         });
     });
 
-    *state.connection_status.lock().map_err(|e| e.to_string())? = ConnectionStatus::Connected;
+    let mut status = state.connection_status.lock().map_err(|e| e.to_string())?;
+    *status = ConnectionStatus::Connected;
     Ok(())
 }
 
@@ -105,7 +106,8 @@ fn disconnect_serial(state: State<AppState>) -> Result<(), String> {
     serial.disconnect();
     let mut tx = state.tx.lock().map_err(|e| e.to_string())?;
     *tx = None;
-    *state.connection_status.lock().map_err(|e| e.to_string())? = ConnectionStatus::Disconnected;
+    let mut status = state.connection_status.lock().map_err(|e| e.to_string())?;
+    *status = ConnectionStatus::Disconnected;
     Ok(())
 }
 
@@ -278,13 +280,11 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             app.listen("robot_state_update", move |event| {
-                if let Some(state) = event.payload().as_ref() {
-                    if let Ok(rs) = serde_json::from_str::<RobotState>(state) {
-                        // Update stored state
-                        if let Some(s) = handle.try_state::<AppState>() {
-                            let mut robot_state = s.robot_state.lock().unwrap();
-                            *robot_state = rs;
-                        }
+                let payload = event.payload();
+                if let Ok(rs) = serde_json::from_str::<RobotState>(payload) {
+                    if let Some(s) = handle.try_state::<AppState>() {
+                        let mut robot_state = s.robot_state.lock().unwrap();
+                        *robot_state = rs;
                     }
                 }
             });

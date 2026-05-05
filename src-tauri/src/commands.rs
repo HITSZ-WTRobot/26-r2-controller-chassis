@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::protocol::{CommandFrame, FRAME_HEADER, scale_x, scale_y, scale_yaw, scale_vx, scale_vy, scale_wz, scale_height};
+use crate::protocol::{CommandFrame, scale_x, scale_y, scale_yaw, scale_vx, scale_vy, scale_wz, scale_height};
 
 /// Command types matching firmware protocol
 #[derive(Debug, Clone, Serialize, Deserialize)]

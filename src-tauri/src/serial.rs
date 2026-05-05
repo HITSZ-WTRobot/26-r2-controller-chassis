@@ -1,9 +1,6 @@
 use std::sync::Mutex;
 use std::io::{Read, Write};
-use tokio::sync::mpsc;
-use serialport::{SerialPort, SerialPortType,available_ports};
-use tauri::{AppHandle, Emitter};
-use crate::protocol::{FeedbackFrame, ParseError};
+use serialport::{SerialPort, SerialPortType, available_ports};
 
 pub struct SerialManager {
     port: Option<Box<dyn SerialPort>>,
@@ -29,10 +26,6 @@ impl SerialManager {
 
     pub fn disconnect(&mut self) {
         self.port = None;
-    }
-
-    pub fn is_connected(&self) -> bool {
-        self.port.is_some()
     }
 
     pub fn write_frame(&mut self, data: &[u8]) -> Result<(), String> {
@@ -83,61 +76,4 @@ pub fn list_ports() -> Vec<PortInfo> {
             }
         })
         .collect()
-}
-
-pub async fn run_serial_loop(
-    mut serial: SerialManager,
-    app_handle: AppHandle,
-    mut rx: tokio::sync::mpsc::Receiver<Vec<u8>>,
-) {
-    let mut buf = vec![0u8; 256];
-    let mut pos = 0;
-
-    loop {
-        tokio::select! {
-            // Send commands
-            Some(data) = rx.recv() => {
-                if let Err(e) = serial.write_frame(&data) {
-                    let _ = app_handle.emit("serial_error", e);
-                }
-            }
-            // Read feedback
-            result = tokio::task::spawn_blocking(|| {
-                serial.read_bytes(&mut buf[pos..])
-            }) => {
-                match result {
-                    Ok(n) if n > 0 => {
-                        pos += n;
-                        // Try to parse frames
-                        let mut start = 0;
-                        while start + 22 <= pos {
-                            if buf[start] == 0xAA && buf[start + 1] == 0xBB {
-                                let frame_data = &buf[start..start + 22];
-                                match FeedbackFrame::parse(frame_data) {
-                                    Ok(frame) => {
-                                        let _ = app_handle.emit("robot_state_update", &frame);
-                                        start += 22;
-                                        continue;
-                                    }
-                                    Err(ParseError::Incomplete) => break,
-                                    Err(_) => start += 1,
-                                }
-                            } else {
-                                start += 1;
-                            }
-                        }
-                        // Shift remaining
-                        if start > 0 && start < pos {
-                            buf.copy_from_slice(&buf[start..pos]);
-                        }
-                        pos -= start;
-                    }
-                    Ok(0) => {}
-                    Err(e) => {
-                        let _ = app_handle.emit("serial_error", e.to_string());
-                    }
-                }
-            }
-        }
-    }
 }
