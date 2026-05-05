@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/home/syhanjin/workspace/robocon2026/robot_gen2/26-v2-r2-ind-mcu-chassis/docs/*)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}
