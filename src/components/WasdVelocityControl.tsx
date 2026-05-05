@@ -35,7 +35,9 @@ export function WasdVelocityControl() {
   const sendVelocity = useCallback(
     async (vx: number, vy: number, wz: number) => {
       const last = lastSentRef.current;
-      if (last.vx === vx && last.vy === vy && last.wz === wz) return;
+      const isZero = vx === 0 && vy === 0 && wz === 0;
+      const lastZero = last.vx === 0 && last.vy === 0 && last.wz === 0;
+      if (isZero && lastZero) return;
       lastSentRef.current = { vx, vy, wz };
       try {
         await send({ type: 'SetMasterChassisVelocity', vx, vy, wz });
