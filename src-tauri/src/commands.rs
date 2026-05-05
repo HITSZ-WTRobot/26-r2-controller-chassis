@@ -1,0 +1,194 @@
+use serde::{Deserialize, Serialize};
+use crate::protocol::{CommandFrame, FRAME_HEADER, scale_x, scale_y, scale_yaw, scale_vx, scale_vy, scale_wz, scale_height};
+
+/// Command types matching firmware protocol
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Command {
+    Ping,
+    StopChassis,
+    SetChassisHeight { height: f32, v_max: f32, a_max: f32, j_max: f32, link_mode: u16 },
+    SetMasterChassisTargetCurrentState { x: f32, y: f32, yaw: f32, xy_vmax: f32, xy_amax: f32, yaw_vmax: f32, yaw_amax: f32 },
+    SetMasterChassisTargetPreviousCurve { x: f32, y: f32, yaw: f32, xy_vmax: f32, xy_amax: f32, yaw_vmax: f32, yaw_amax: f32 },
+    SetMasterChassisVelocity { vx: f32, vy: f32, wz: f32 },
+    LidarPosture { x: f32, y: f32, yaw: f32, lidar_timestamp: u32 },
+    StepUp { start_distance: f32, end_distance: f32, direction: u16, will_take: u16 },
+    StepUpResume,
+    StepDown { start_distance: f32, end_distance: f32, direction: u16, should_reset: u16 },
+    TakeSpear { target_x: f32, target_y: f32, target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32 },
+    TakeSpearById { spear_id: u16, end_x: f32, end_y: f32, end_yaw: f32 },
+    StoreKFS,
+    ReleaseKFS,
+}
+
+impl Command {
+    pub fn encode(&self, timestamp: u32) -> Vec<u8> {
+        match self {
+            Command::Ping => {
+                let frame = CommandFrame {
+                    cmd: 0x01,
+                    data: [0; 12],
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::StopChassis => {
+                let frame = CommandFrame {
+                    cmd: 0x10,
+                    data: [0; 12],
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::SetChassisHeight { height, v_max, a_max, j_max, link_mode } => {
+                let mut data = [0u8; 12];
+                let h = scale_height(*height);
+                data[0..2].copy_from_slice(&h.to_be_bytes());
+                let v = (*v_max * 1000.0) as u16;
+                data[2..4].copy_from_slice(&v.to_be_bytes());
+                let a = (*a_max * 100.0) as u16;
+                data[4..6].copy_from_slice(&a.to_be_bytes());
+                data[6..8].copy_from_slice(&(*j_max as u16).to_be_bytes());
+                data[8..10].copy_from_slice(&link_mode.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x11,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::SetMasterChassisTargetCurrentState { x, y, yaw, xy_vmax, xy_amax, yaw_vmax, yaw_amax } |
+            Command::SetMasterChassisTargetPreviousCurve { x, y, yaw, xy_vmax, xy_amax, yaw_vmax, yaw_amax } => {
+                let cmd = if matches!(self, Command::SetMasterChassisTargetCurrentState {..}) { 0x13 } else { 0x14 };
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&scale_x(*x).to_be_bytes());
+                data[2..4].copy_from_slice(&scale_y(*y).to_be_bytes());
+                data[4..6].copy_from_slice(&scale_yaw(*yaw).to_be_bytes());
+                // Pack 4x uint12: xy_vmax*200, xy_amax*200, yaw_vmax, yaw_amax
+                let xy_v = (*xy_vmax * 200.0) as u16;
+                let xy_a = (*xy_amax * 200.0) as u16;
+                let yaw_v = *yaw_vmax as u16;
+                let yaw_a = *yaw_amax as u16;
+                // uint12 packing: [a11:a4][a3:a0|b11:b8][b7:b0][c11:c4][c3:c0|d11:d8][d7:d0]
+                data[6] = ((xy_v >> 4) & 0xFF) as u8;
+                data[7] = (((xy_v & 0x0F) << 4) | ((xy_a >> 8) & 0x0F)) as u8;
+                data[8] = (xy_a & 0xFF) as u8;
+                data[9] = ((yaw_v >> 4) & 0xFF) as u8;
+                data[10] = (((yaw_v & 0x0F) << 4) | ((yaw_a >> 8) & 0x0F)) as u8;
+                data[11] = (yaw_a & 0xFF) as u8;
+                let frame = CommandFrame {
+                    cmd,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::SetMasterChassisVelocity { vx, vy, wz } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&scale_vx(*vx).to_be_bytes());
+                data[2..4].copy_from_slice(&scale_vy(*vy).to_be_bytes());
+                data[4..6].copy_from_slice(&scale_wz(*wz).to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x15,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::LidarPosture { x, y, yaw, lidar_timestamp } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&scale_x(*x).to_be_bytes());
+                data[2..4].copy_from_slice(&scale_y(*y).to_be_bytes());
+                data[4..6].copy_from_slice(&scale_yaw(*yaw).to_be_bytes());
+                data[6..10].copy_from_slice(&lidar_timestamp.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x21,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::StepUp { start_distance, end_distance, direction, will_take } => {
+                let mut data = [0u8; 12];
+                let sd = (start_distance * 2000.0) as i16;
+                let ed = (end_distance * 2000.0) as i16;
+                data[0..2].copy_from_slice(&sd.to_be_bytes());
+                data[2..4].copy_from_slice(&ed.to_be_bytes());
+                data[4..6].copy_from_slice(&direction.to_be_bytes());
+                data[6..8].copy_from_slice(&will_take.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x30,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::StepUpResume => {
+                let frame = CommandFrame {
+                    cmd: 0x31,
+                    data: [0; 12],
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::StepDown { start_distance, end_distance, direction, should_reset } => {
+                let mut data = [0u8; 12];
+                let sd = (start_distance * 2000.0) as i16;
+                let ed = (end_distance * 2000.0) as i16;
+                data[0..2].copy_from_slice(&sd.to_be_bytes());
+                data[2..4].copy_from_slice(&ed.to_be_bytes());
+                data[4..6].copy_from_slice(&direction.to_be_bytes());
+                data[6..8].copy_from_slice(&should_reset.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x32,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::TakeSpear { target_x, target_y, target_yaw, end_x, end_y, end_yaw } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&scale_x(*target_x).to_be_bytes());
+                data[2..4].copy_from_slice(&scale_y(*target_y).to_be_bytes());
+                data[4..6].copy_from_slice(&scale_yaw(*target_yaw).to_be_bytes());
+                data[6..8].copy_from_slice(&scale_x(*end_x).to_be_bytes());
+                data[8..10].copy_from_slice(&scale_y(*end_y).to_be_bytes());
+                data[10..12].copy_from_slice(&scale_yaw(*end_yaw).to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x40,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::TakeSpearById { spear_id, end_x, end_y, end_yaw } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&spear_id.to_be_bytes());
+                data[2..4].copy_from_slice(&scale_x(*end_x).to_be_bytes());
+                data[4..6].copy_from_slice(&scale_y(*end_y).to_be_bytes());
+                data[6..8].copy_from_slice(&scale_yaw(*end_yaw).to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x41,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::StoreKFS => {
+                let frame = CommandFrame {
+                    cmd: 0x42,
+                    data: [0; 12],
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::ReleaseKFS => {
+                let frame = CommandFrame {
+                    cmd: 0x43,
+                    data: [0; 12],
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+        }
+    }
+}
