@@ -77,75 +77,10 @@ export function useRobotState() {
 
 export function useCommand() {
   const send = useCallback(async (cmd: Command) => {
-    const cmdName = cmd.type.charAt(0).toLowerCase() + cmd.type.slice(1);
-    const args: Record<string, unknown> = {};
-
-    switch (cmd.type) {
-      case 'Ping':
-      case 'StopChassis':
-      case 'StepUpResume':
-      case 'StoreKFS':
-      case 'ReleaseKFS':
-        break;
-      case 'SetChassisHeight':
-        args.height = cmd.height;
-        args.v_max = cmd.v_max;
-        args.a_max = cmd.a_max;
-        args.j_max = cmd.j_max;
-        args.link_mode = cmd.link_mode;
-        break;
-      case 'SetMasterChassisTargetCurrentState':
-        args.x = cmd.x;
-        args.y = cmd.y;
-        args.yaw = cmd.yaw;
-        args.xy_vmax = cmd.xy_vmax;
-        args.xy_amax = cmd.xy_amax;
-        args.yaw_vmax = cmd.yaw_vmax;
-        args.yaw_amax = cmd.yaw_amax;
-        break;
-      case 'SetMasterChassisVelocity':
-        args.vx = cmd.vx;
-        args.vy = cmd.vy;
-        args.wz = cmd.wz;
-        break;
-      case 'LidarPosture':
-        args.x = cmd.x;
-        args.y = cmd.y;
-        args.yaw = cmd.yaw;
-        args.lidar_timestamp = cmd.lidar_timestamp;
-        break;
-      case 'StepUp':
-        args.start_distance = cmd.start_distance;
-        args.end_distance = cmd.end_distance;
-        args.direction = cmd.direction;
-        args.will_take = cmd.will_take;
-        break;
-      case 'StepDown':
-        args.start_distance = cmd.start_distance;
-        args.end_distance = cmd.end_distance;
-        args.direction = cmd.direction;
-        args.should_reset = cmd.should_reset;
-        break;
-      case 'TakeSpear':
-        args.target_x = cmd.target_x;
-        args.target_y = cmd.target_y;
-        args.target_yaw = cmd.target_yaw;
-        args.end_x = cmd.end_x;
-        args.end_y = cmd.end_y;
-        args.end_yaw = cmd.end_yaw;
-        break;
-      case 'TakeSpearById':
-        args.spear_id = cmd.spear_id;
-        args.end_x = cmd.end_x;
-        args.end_y = cmd.end_y;
-        args.end_yaw = cmd.end_yaw;
-        break;
-    }
-
     try {
-      await invoke(cmdName, args);
+      await invoke('send_command', { cmd });
     } catch (e) {
-      console.error(`Failed to send ${cmdName}:`, e);
+      console.error(`Failed to send ${cmd.type}:`, e);
       throw e;
     }
   }, []);
