@@ -40,6 +40,7 @@ export function SerialDebugger() {
   useEffect(() => {
     let unlistenTx: UnlistenFn | null = null;
     let unlistenRx: UnlistenFn | null = null;
+    let cancelled = false;
 
     const append = (direction: Direction, bytes: number[]) => {
       if (pausedRef.current) return;
@@ -56,11 +57,16 @@ export function SerialDebugger() {
     };
 
     (async () => {
-      unlistenTx = await listen<number[]>('serial_tx', (e) => append('tx', e.payload));
-      unlistenRx = await listen<number[]>('serial_rx', (e) => append('rx', e.payload));
+      const tx = await listen<number[]>('serial_tx', (e) => append('tx', e.payload));
+      if (cancelled) { tx(); return; }
+      unlistenTx = tx;
+      const rx = await listen<number[]>('serial_rx', (e) => append('rx', e.payload));
+      if (cancelled) { rx(); return; }
+      unlistenRx = rx;
     })();
 
     return () => {
+      cancelled = true;
       unlistenTx?.();
       unlistenRx?.();
     };

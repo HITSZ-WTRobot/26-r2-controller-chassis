@@ -30,6 +30,12 @@ fn connect_serial(
         serial.connect(&port, baud)?;
     }
 
+    let (tx, mut rx) = mpsc::channel::<Vec<u8>>(100);
+    {
+        let mut tx_slot = state.tx.lock().map_err(|e| e.to_string())?;
+        *tx_slot = Some(tx);
+    }
+
     let port_clone = port.clone();
     let baud_clone = baud;
 
@@ -38,7 +44,6 @@ fn connect_serial(
         rt.block_on(async {
             let mut s = SerialManager::new();
             if s.connect(&port_clone, baud_clone).is_ok() {
-                let (_tx, mut rx) = mpsc::channel::<Vec<u8>>(100);
                 let _ = app_handle.emit("connection_status", "connected");
 
                 let mut buf = vec![0u8; 256];
@@ -46,9 +51,14 @@ fn connect_serial(
 
                 loop {
                     tokio::select! {
-                        Some(data) = rx.recv() => {
-                            if let Err(e) = s.write_frame(&data) {
-                                let _ = app_handle.emit("serial_error", e);
+                        msg = rx.recv() => {
+                            match msg {
+                                Some(data) => {
+                                    if let Err(e) = s.write_frame(&data) {
+                                        let _ = app_handle.emit("serial_error", e);
+                                    }
+                                }
+                                None => break,
                             }
                         }
                         _ = tokio::time::sleep(tokio::time::Duration::from_millis(1)) => {

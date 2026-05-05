@@ -53,20 +53,26 @@ export function useRobotState() {
   useEffect(() => {
     let unlistenState: UnlistenFn | null = null;
     let unlistenConnection: UnlistenFn | null = null;
+    let cancelled = false;
 
     const setup = async () => {
-      unlistenState = await listen<RobotState>('robot_state_update', (event) => {
+      const s = await listen<RobotState>('robot_state_update', (event) => {
         setState(event.payload);
       });
+      if (cancelled) { s(); return; }
+      unlistenState = s;
 
-      unlistenConnection = await listen<ConnectionStatus>('connection_status', (event) => {
+      const c = await listen<ConnectionStatus>('connection_status', (event) => {
         setConnectionStatus(event.payload);
       });
+      if (cancelled) { c(); return; }
+      unlistenConnection = c;
     };
 
     setup();
 
     return () => {
+      cancelled = true;
       unlistenState?.();
       unlistenConnection?.();
     };
