@@ -45,6 +45,79 @@ React state management is handled within components using `useState` and similar
 
 ## Tech Stack
 - **Frontend**: React 19, TypeScript, Vite 7, Tailwind CSS, Shadcn UI
-- **Backend**: Rust, Tauri 2
+- **Backend**: Rust, Tauri 2, tokio, serialport
 - **Package Manager**: bun
 - **Build Tool**: Vite
+
+## Robot Communication Protocol
+
+This application controls the Robocon 2026 independent lift mecanum chassis (STM32F407) via UART3 at 230400 baud.
+
+### Protocol Specification
+
+| Item | Value |
+|------|-------|
+| Frame header | `0xAA 0xBB` |
+| Control frame | 21 bytes (header2 + cmd1 + data12 + timestamp4 + crc2) |
+| Feedback frame | 22 bytes (header2 + timestamp4 + x2 + y2 + yaw2 + frontH2 + rearH2 + action2 + conn2 + crc2) |
+| CRC | CRC16-Modbus (poly=0x8005, init=0xFFFF, refin=true, refout=true, xorout=0x0000) |
+| Timestamp sync | First 49 frames only sync, no control execution |
+
+### Scaling Rules
+
+| Physical | Encoding |
+|----------|----------|
+| Position x/y | `int16 = value_m * 2000` |
+| Yaw | `int16 = value_deg * 100` |
+| Velocity vx/vy | `int16 = value_mps * 2000` |
+| Angular velocity wz | `int16 = value_degps * 100` |
+| Chassis height | `int16 = height_m * 2000` |
+
+### Command List (0x01-0x43)
+
+| Cmd | Name | Data |
+|-----|------|------|
+| `0x01` | Ping | - |
+| `0x10` | StopChassis | - |
+| `0x11` | SetChassisHeight | height, v_max, a_max, j_max, link_mode |
+| `0x13` | SetMasterChassisTargetCurrentState | x, y, yaw, xy_vmax, xy_amax, yaw_vmax, yaw_amax |
+| `0x14` | SetMasterChassisTargetPreviousCurve | same as 0x13 |
+| `0x15` | SetMasterChassisVelocity | vx, vy, wz |
+| `0x21` | LidarPosture | x, y, yaw, lidar_timestamp |
+| `0x30` | StepUp | startDist, endDist, direction, willTake |
+| `0x31` | StepUpResume | - |
+| `0x32` | StepDown | startDist, endDist, direction, shouldReset |
+| `0x40` | TakeSpear | target(x,y,yaw), end(x,y,yaw) |
+| `0x41` | TakeSpearById | spearId(0-5), end(x,y,yaw) |
+| `0x42` | StoreKFS | - |
+| `0x43` | ReleaseKFS | - |
+
+### Feedback Fields
+
+- `timestamp`: u32, HAL_GetTick()
+- `x, y`: int16 / 2000 → meters
+- `yaw`: int16 / 100 → degrees
+- `frontHeight, rearHeight`: int16 / 2000 → meters
+- `action_state`: bitfield (StepStatus bit0-1, ChassisMode bit2-3, ChassisCurveFinished bit4, LiftStatus bit5-6, GripStatus bit7-9, GripSuctionHasObject bit10)
+- `connection_state`: bitfield (wheel0-3, lift0-3, grip_arm, grip_turn, gyro_yaw, bit14=localization stream, bit15=upper_host link)
+
+### Key Behavior Constraints
+
+1. First 49 frames only timestamp sync, control execution starts from frame 50
+2. bit14 (localization stream) requires valid LidarPosture within 200 watchdog ticks
+3. bit15 (upper_host) indicates UART link status
+4. TakeSpear requires end_pos x-distance > 0.20m from target
+
+### Backend Modules
+
+- `src-tauri/src/serial.rs` - Serial port manager, cross-platform enumeration
+- `src-tauri/src/protocol.rs` - Frame encode/decode, CRC16, scaling helpers
+- `src-tauri/src/commands.rs` - Command enum and encoding
+- `src-tauri/src/state.rs` - RobotState, ActionState, ConnectionState parsing
+- `src-tauri/src/lib.rs` - Tauri command handlers
+
+## Cross-Platform Requirements
+
+- Windows: COM ports (e.g., COM3)
+- Linux: /dev/ttyUSB*, /dev/ttyACM*
+- macOS: /dev/tty.usbserial*, /dev/tty.usbmodem*
