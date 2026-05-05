@@ -34,17 +34,19 @@ bun run preview        # Preview the built frontend
 ### Tauri 2.x Capabilities
 Permissions are declared in `src-tauri/capabilities/*.json`. When adding new Tauri plugins or APIs, you must grant corresponding permissions in the capabilities file.
 
-### Frontend Architecture (React + Shadcn UI)
-- **Styling**: Tailwind CSS + CSS variables for theming
-- **Components**: Shadcn UI (installed via `bunx shadcn@latest add <component>`)
-- **Component location**: `src/components/ui/` - Shadcn components, `src/components/` - custom components
-- **Shadcn structure**: Each component has its own folder (e.g., `button.tsx`, `button.css`)
+### Frontend Architecture (React + Tailwind CSS v4)
+- **Styling**: Tailwind CSS v4 with `@tailwindcss/vite` plugin
+- **CSS entry**: `src/index.css` with `@import "tailwindcss"`
+- **Component location**: `src/components/` - custom components
+- **Custom components**: ConnectionPanel, StatusDisplay, ActionStatePanel, ConnectionMap, ControlPanel, Layout
+- **Hooks**: `src/hooks/useSerial.ts` - serial connection and command hooks
+- **Types**: `src/types/robot.ts` - TypeScript types matching Rust backend
 
 ### Frontend State
 React state management is handled within components using `useState` and similar hooks. No external state library is currently configured.
 
 ## Tech Stack
-- **Frontend**: React 19, TypeScript, Vite 7, Tailwind CSS, Shadcn UI
+- **Frontend**: React 19, TypeScript, Vite 7, Tailwind CSS v4
 - **Backend**: Rust, Tauri 2, tokio, serialport
 - **Package Manager**: bun
 - **Build Tool**: Vite
