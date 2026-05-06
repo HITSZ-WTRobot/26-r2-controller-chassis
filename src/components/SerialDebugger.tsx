@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 
 type Direction = 'tx' | 'rx';
 
@@ -252,34 +253,40 @@ export function SerialDebugger() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rxBufferRef = useRef<number[]>([]);
   const [rxTotalBytes, setRxTotalBytes] = useState(0);
+  const [validFdbCount, setValidFdbCount] = useState(0);
 
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
 
-  // Drain frames from the rx buffer.  Whenever the two-byte header (AA BB) is
-  // found we output a frame regardless of CRC — valid frames get the usual
-  // colour-coded breakdown, invalid frames are shown entirely in red so the
-  // user can see what is actually on the wire.
+  // Drain frames from the rx buffer.  Valid feedback frames are counted but
+  // not displayed (too noisy at 1+ kHz).  Every other frame — invalid CRC,
+  // wrong length, or a 21-byte CTL candidate — is shown in red.
   const drainRxBuffer = (buffer: number[]) => {
-    const frames: number[][] = [];
+    const invalidFrames: number[][] = [];
+    let validFdbCount = 0;
     let start = 0;
     while (start + 21 <= buffer.length) {
       if (buffer[start] === 0xAA && buffer[start + 1] === 0xBB) {
-        // Always try 22-byte feedback frame when enough data is present.
         if (start + 22 <= buffer.length) {
-          frames.push(buffer.slice(start, start + 22));
+          const candidate = buffer.slice(start, start + 22);
+          const analysis = analyzeFrame(candidate);
+          if (analysis.valid && analysis.frameType === 'feedback') {
+            validFdbCount++;
+          } else {
+            invalidFrames.push(candidate);
+          }
           start += 22;
           continue;
         }
         // Only 21 bytes available — emit as a candidate control frame.
-        frames.push(buffer.slice(start, start + 21));
+        invalidFrames.push(buffer.slice(start, start + 21));
         start += 21;
         continue;
       }
       start += 1;
     }
-    return { frames, consumed: start };
+    return { invalidFrames, validFdbCount, consumed: start };
   };
 
   useEffect(() => {
@@ -305,7 +312,7 @@ export function SerialDebugger() {
       if (pausedRef.current) return;
       setRxTotalBytes((n) => n + bytes.length);
       rxBufferRef.current.push(...bytes);
-      const { frames, consumed } = drainRxBuffer(rxBufferRef.current);
+      const { invalidFrames, validFdbCount: newValid, consumed } = drainRxBuffer(rxBufferRef.current);
       if (consumed > 0) {
         rxBufferRef.current = rxBufferRef.current.slice(consumed);
       }
@@ -313,11 +320,14 @@ export function SerialDebugger() {
       if (rxBufferRef.current.length > 512) {
         rxBufferRef.current = rxBufferRef.current.slice(-256);
       }
-      if (frames.length > 0) {
+      if (newValid > 0) {
+        setValidFdbCount((n) => n + newValid);
+      }
+      if (invalidFrames.length > 0) {
         const now = new Date();
         setEntries((prev) => {
           let next = prev;
-          for (const frame of frames) {
+          for (const frame of invalidFrames) {
             const entry: LogEntry = {
               id: idCounter.current++,
               time: formatTime(now),
@@ -379,10 +389,18 @@ export function SerialDebugger() {
           {paused ? '已暂停' : '暂停'}
         </button>
         <button
-          onClick={() => { setEntries([]); setRxTotalBytes(0); }}
+          onClick={() => { setEntries([]); setRxTotalBytes(0); setValidFdbCount(0); }}
           className="px-2 py-1 rounded bg-gray-500 text-white hover:bg-gray-600"
         >
           清空
+        </button>
+        <button
+          onClick={() => {
+            for (let i = 0; i < 50; i++) invoke('ping');
+          }}
+          className="px-2 py-1 rounded bg-primary text-white hover:bg-primary/80"
+        >
+          发送 50 Ping
         </button>
         <label className="flex items-center gap-1 text-text-secondary cursor-pointer select-none">
           <input
@@ -394,7 +412,7 @@ export function SerialDebugger() {
           自动滚动
         </label>
         <span className="ml-auto text-text-secondary font-mono">
-          {filtered.length} / {entries.length} 帧 | {rxTotalBytes} B
+          <span className="text-success">FDB {validFdbCount}</span> | 错误帧 {entries.length} | {rxTotalBytes} B
         </span>
       </div>
 
