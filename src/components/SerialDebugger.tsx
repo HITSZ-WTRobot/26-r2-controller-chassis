@@ -178,7 +178,7 @@ function FrameHexDisplay({ bytes }: { bytes: number[] }) {
     return (
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className={`shrink-0 text-[10px] px-1 rounded font-bold text-white ${typeBg}`}>{typeLabel}</span>
+          <span className="shrink-0 text-[10px] px-1 rounded font-bold text-white bg-red-600">{typeLabel}</span>
           <span className="px-1.5 py-0.5 rounded bg-red-500/25 text-red-300 font-mono break-all">
             {bytes.map((b) => byteToHex(b)).join(' ')}
           </span>
@@ -226,40 +226,27 @@ export function SerialDebugger() {
     pausedRef.current = paused;
   }, [paused]);
 
-  // Drain complete frames from the rx buffer.
-  // We try 22-byte ONLY when 22+ bytes are available — falling back to 21-byte
-  // when the 22-byte CRC fails would occasionally (1/65536) misidentify a
-  // 22-byte FDB frame as a valid 21-byte CTL frame, consuming 21 instead of 22
-  // bytes and desynchronising the scanner from the real frame boundaries.
+  // Drain frames from the rx buffer.  Whenever the two-byte header (AA BB) is
+  // found we output a frame regardless of CRC — valid frames get the usual
+  // colour-coded breakdown, invalid frames are shown entirely in red so the
+  // user can see what is actually on the wire.
   const drainRxBuffer = (buffer: number[]) => {
     const frames: number[][] = [];
     let start = 0;
     while (start + 21 <= buffer.length) {
       if (buffer[start] === 0xAA && buffer[start + 1] === 0xBB) {
+        // Always try 22-byte feedback frame when enough data is present.
         if (start + 22 <= buffer.length) {
-          // Enough data for a 22-byte frame — try it, advance by 1 on failure
-          const candidate = buffer.slice(start, start + 22);
-          const analysis = analyzeFrame(candidate);
-          if (analysis.valid) {
-            frames.push(candidate);
-            start += 22;
-            continue;
-          }
-          start += 1;
+          frames.push(buffer.slice(start, start + 22));
+          start += 22;
           continue;
         }
-        // Exactly 21 bytes available at header — try 21-byte, then wait for more
-        const candidate = buffer.slice(start, start + 21);
-        const analysis = analyzeFrame(candidate);
-        if (analysis.valid) {
-          frames.push(candidate);
-          start += 21;
-          continue;
-        }
-        break;
-      } else {
-        start += 1;
+        // Only 21 bytes available — emit as a candidate control frame.
+        frames.push(buffer.slice(start, start + 21));
+        start += 21;
+        continue;
       }
+      start += 1;
     }
     return { frames, consumed: start };
   };
