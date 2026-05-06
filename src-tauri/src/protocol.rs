@@ -26,7 +26,8 @@ pub struct FeedbackFrame {
 }
 
 /// CRC16-Modbus parameters
-const CRC16_POLY: u16 = 0x8005;
+/// poly=0x8005, reflected for LSB-first processing = 0xA001
+const CRC16_POLY_REFLECTED: u16 = 0xA001;
 const CRC16_INIT: u16 = 0xFFFF;
 
 pub fn crc16_modbus(data: &[u8]) -> u16 {
@@ -35,14 +36,12 @@ pub fn crc16_modbus(data: &[u8]) -> u16 {
         crc ^= byte as u16;
         for _ in 0..8 {
             if crc & 0x0001 != 0 {
-                crc = (crc >> 1) ^ CRC16_POLY;
+                crc = (crc >> 1) ^ CRC16_POLY_REFLECTED;
             } else {
                 crc >>= 1;
             }
         }
     }
-    // Reverse bits
-    crc = crc.reverse_bits();
     crc
 }
 

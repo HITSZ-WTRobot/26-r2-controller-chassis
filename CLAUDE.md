@@ -66,7 +66,7 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 | Frame header | `0xAA 0xBB` |
 | Control frame | 21 bytes (header2 + cmd1 + data12 + timestamp4 + crc2) |
 | Feedback frame | 22 bytes (header2 + timestamp4 + x2 + y2 + yaw2 + frontH2 + rearH2 + action2 + conn2 + crc2) |
-| CRC | CRC16-Modbus (poly=0x8005, init=0xFFFF, refin=true, refout=true, xorout=0x0000) |
+| CRC | CRC16-Modbus (poly=0x8005, reflected=0xA001, init=0xFFFF, refin=true, refout=true, xorout=0x0000) — LSB-first processing uses reflected poly 0xA001, no final reversal needed |
 | Timestamp sync | First 49 frames only sync, no control execution |
 
 ### Scaling Rules

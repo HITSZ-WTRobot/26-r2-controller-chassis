@@ -15,24 +15,20 @@ const CONTROL_FRAME_LEN = 21;
 const FEEDBACK_FRAME_LEN = 22;
 
 // CRC16-Modbus: poly=0x8005, init=0xFFFF, refin=true, refout=true, xorout=0x0000
+// LSB-first processing with reflected polynomial 0xA001 (bit-reverse of 0x8005)
 function crc16modbus(data: number[]): number {
   let crc = 0xffff;
   for (const byte of data) {
     crc ^= byte;
     for (let i = 0; i < 8; i++) {
       if (crc & 0x0001) {
-        crc = (crc >> 1) ^ 0x8005;
+        crc = (crc >> 1) ^ 0xA001;
       } else {
         crc >>= 1;
       }
     }
   }
-  let reversed = 0;
-  for (let i = 0; i < 16; i++) {
-    reversed = (reversed << 1) | (crc & 1);
-    crc >>= 1;
-  }
-  return reversed;
+  return crc;
 }
 
 function bigEndianU16(bytes: number[], offset: number): number {
