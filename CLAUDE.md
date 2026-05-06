@@ -122,6 +122,14 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 - `src-tauri/src/state.rs` - RobotState, ActionState, ConnectionState parsing
 - `src-tauri/src/lib.rs` - Tauri command handlers
 
+### Event & Thread Architecture
+
+- **Reader/writer threads**: Use `Weak<Mutex<Box<dyn SerialPort>>>` so threads auto-exit when `disconnect()` drops the last strong `Arc` reference. Without this, the threads' `Arc` clones keep the port alive even after disconnect.
+- **`serial_rx` event**: Carries **raw byte chunks** (variable-length `number[]` from each `read()` call). The frontend `SerialDebugger` buffers these and extracts complete frames via `drainRxBuffer()`. This ensures all incoming data is visible even when CRC/header checks fail.
+- **`serial_tx` event**: Carries complete 21-byte control frames emitted from `send_command()`.
+- **`robot_state_update` event**: Carries parsed `RobotState` from successfully decoded 22-byte feedback frames. Used by `StatusDisplay` via `useRobotState()`.
+- **Frontend frame drain**: `drainRxBuffer` only tries 21-byte (CTL) frames when fewer than 22 bytes are available at a header. When 22+ bytes are available, it only tries 22-byte (FDB) and advances by 1 on CRC failure — this prevents the 1/65536 CRC collision that would otherwise desync the scanner with real frame boundaries.
+
 ## Cross-Platform Requirements
 
 - Windows: COM ports (e.g., COM3)

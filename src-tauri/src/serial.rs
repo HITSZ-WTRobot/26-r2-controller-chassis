@@ -1,28 +1,8 @@
-use std::io::{Read, Write};
+use std::sync::{Arc, Mutex};
 use serialport::{SerialPort, SerialPortType, available_ports};
 
 pub struct SerialManager {
-    port: Option<Box<dyn SerialPort>>,
-}
-
-pub struct SerialReader {
-    port: Box<dyn SerialPort>,
-}
-
-impl SerialReader {
-    pub fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.port.read(buf)
-    }
-}
-
-pub struct SerialWriter {
-    port: Box<dyn SerialPort>,
-}
-
-impl SerialWriter {
-    pub fn write_all(&mut self, data: &[u8]) -> std::io::Result<()> {
-        self.port.write_all(data)
-    }
+    port: Option<Arc<Mutex<Box<dyn SerialPort>>>>,
 }
 
 impl SerialManager {
@@ -32,10 +12,10 @@ impl SerialManager {
 
     pub fn connect(&mut self, port_name: &str, baud_rate: u32) -> Result<(), String> {
         let port = serialport::new(port_name, baud_rate)
-            .timeout(std::time::Duration::from_millis(100))
+            .timeout(std::time::Duration::from_millis(5)) // short timeout so writer isn't stalled
             .open()
             .map_err(|e| e.to_string())?;
-        self.port = Some(port);
+        self.port = Some(Arc::new(Mutex::new(port)));
         Ok(())
     }
 
@@ -43,17 +23,8 @@ impl SerialManager {
         self.port = None;
     }
 
-    /// Produce independent reader/writer handles backed by OS-level clones of
-    /// the port. Reader and writer can run on separate threads without stalling
-    /// each other.
-    pub fn split(&self) -> Result<(SerialReader, SerialWriter), String> {
-        let port = self.port.as_ref().ok_or_else(|| "Not connected".to_string())?;
-        let reader_port = port.try_clone().map_err(|e| e.to_string())?;
-        let writer_port = port.try_clone().map_err(|e| e.to_string())?;
-        Ok((
-            SerialReader { port: reader_port },
-            SerialWriter { port: writer_port },
-        ))
+    pub fn handle(&self) -> Result<Arc<Mutex<Box<dyn SerialPort>>>, String> {
+        self.port.clone().ok_or_else(|| "Not connected".to_string())
     }
 }
 

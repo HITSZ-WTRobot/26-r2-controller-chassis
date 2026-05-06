@@ -17,22 +17,23 @@ export function StatusDisplay({ state }: StatusDisplayProps) {
   return (
     <div className="bg-surface rounded-lg shadow p-4 border border-border">
       <h2 className="text-lg font-semibold mb-4 text-text">机器人状态</h2>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         {FIELDS.map((f) => {
           const value = state ? state[f.key] as number : null;
+          const spanClass = f.key === 'timestamp' ? 'col-span-2' : '';
           return (
             <div
               key={f.key}
-              className={`p-3 rounded border border-border ${state ? 'bg-bg' : 'bg-bg/50'}`}
+              className={`p-2 rounded border border-border ${spanClass} ${state ? 'bg-bg' : 'bg-bg/50'}`}
             >
-              <span className="text-sm text-text-secondary block">{f.label}</span>
+              <span className="text-xs text-text-secondary block">{f.label}</span>
               {value === null ? (
-                <span className="font-mono font-semibold text-text-secondary inline-block">
+                <span className="font-mono text-sm font-semibold text-text-secondary inline-block">
                   <span className="inline-block w-16 h-4 rounded bg-border animate-pulse align-middle" />
                   {f.unit && <span className="ml-1 align-middle">{f.unit}</span>}
                 </span>
               ) : (
-                <span className="font-mono font-semibold text-text">
+                <span className="font-mono text-sm font-semibold text-text whitespace-nowrap">
                   {f.format(value)}{f.unit && ` ${f.unit}`}
                 </span>
               )}

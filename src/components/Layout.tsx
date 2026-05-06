@@ -60,7 +60,7 @@ export function Layout({ state }: LayoutProps) {
           <Tabs tabs={tabs} defaultTab="chassis" />
         </div>
 
-        <aside className="hidden xl:flex xl:flex-col w-96 shrink-0 sticky top-4 self-start max-h-[calc(100vh-2rem)]">
+        <aside className="hidden xl:flex xl:flex-col w-[38rem] shrink-0 sticky top-4 self-start max-h-[calc(100vh-2rem)]">
           <SerialDebugger />
         </aside>
       </div>

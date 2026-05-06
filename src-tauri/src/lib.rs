@@ -3,8 +3,10 @@ mod protocol;
 mod commands;
 mod state;
 
+use std::io::Write;
 use std::sync::Mutex;
 use std::sync::mpsc;
+use std::time::Instant;
 use tauri::{AppHandle, Emitter, State, Manager, Listener};
 use commands::Command;
 use state::{RobotState, ConnectionStatus};
@@ -15,7 +17,7 @@ struct AppState {
     tx: Mutex<Option<mpsc::Sender<Vec<u8>>>>,
     robot_state: Mutex<RobotState>,
     connection_status: Mutex<ConnectionStatus>,
-    timestamp_counter: Mutex<u32>,
+    start_time: Instant,
 }
 
 #[tauri::command]
@@ -25,10 +27,10 @@ fn connect_serial(
     state: State<AppState>,
     app_handle: AppHandle,
 ) -> Result<(), String> {
-    let (read_handle, write_handle) = {
+    let port_handle = {
         let mut serial = state.serial.lock().map_err(|e| e.to_string())?;
         serial.connect(&port, baud)?;
-        serial.split()?
+        serial.handle()?
     };
 
     let (tx, rx) = mpsc::channel::<Vec<u8>>();
@@ -37,14 +39,36 @@ fn connect_serial(
         *tx_slot = Some(tx);
     }
 
-    // Writer thread: drain channel and write to port. Independent of reader so
-    // a slow read can't stall sends.
+    // Writer thread: drain channel, coalesce consecutive velocity commands so a
+    // stop-on-release isn't stuck behind stale velocity frames.
     {
         let app_handle = app_handle.clone();
-        let mut writer = write_handle;
+        let writer_weak = std::sync::Arc::downgrade(&port_handle);
         std::thread::spawn(move || {
-            while let Ok(data) = rx.recv() {
-                if let Err(e) = writer.write_all(&data) {
+            const CMD_VELOCITY: u8 = 0x15;
+
+            while let Ok(mut data) = rx.recv() {
+                // Coalesce consecutive velocity commands — only the latest is relevant
+                if data.len() == 21 && data[2] == CMD_VELOCITY {
+                    while let Ok(newer) = rx.try_recv() {
+                        if newer.len() == 21 && newer[2] == CMD_VELOCITY {
+                            data = newer;
+                        } else {
+                            // Non-velocity frame: flush current velocity first
+                            let Some(writer_port) = writer_weak.upgrade() else { return; };
+                            let result = writer_port.lock().unwrap().write_all(&data);
+                            if let Err(e) = result {
+                                let _ = app_handle.emit("serial_error", e.to_string());
+                                return;
+                            }
+                            data = newer;
+                            break;
+                        }
+                    }
+                }
+                let Some(writer_port) = writer_weak.upgrade() else { return; };
+                let result = writer_port.lock().unwrap().write_all(&data);
+                if let Err(e) = result {
                     let _ = app_handle.emit("serial_error", e.to_string());
                     break;
                 }
@@ -52,61 +76,70 @@ fn connect_serial(
         });
     }
 
-    // Reader thread: blocking reads with timeout, parse 22-byte frames.
-    std::thread::spawn(move || {
-        let mut reader = read_handle;
-        let _ = app_handle.emit("connection_status", "connected");
+    // Reader thread: short-timeout reads (5ms) so the lock is almost never contended.
+    {
+        let reader_weak = std::sync::Arc::downgrade(&port_handle);
+        std::thread::spawn(move || {
+            let _ = app_handle.emit("connection_status", "connected");
 
-        let mut buf = vec![0u8; 256];
-        let mut pos = 0;
-        let mut temp_buf = [0u8; 64];
+            let mut buf = vec![0u8; 256];
+            let mut pos = 0;
+            let mut temp_buf = [0u8; 64];
 
-        loop {
-            match reader.read(&mut temp_buf) {
-                Ok(0) => continue,
-                Ok(n) => {
-                    if pos + n > buf.len() {
-                        pos = 0;
-                        continue;
-                    }
-                    buf[pos..pos + n].copy_from_slice(&temp_buf[..n]);
-                    pos += n;
+            loop {
+                let Some(reader_port) = reader_weak.upgrade() else {
+                    let _ = app_handle.emit("connection_status", "disconnected");
+                    break;
+                };
+                let result = reader_port.lock().unwrap().read(&mut temp_buf);
+                match result {
+                    Ok(0) => continue,
+                    Ok(n) => {
+                        // Emit raw bytes so the debugger always shows incoming data
+                        let _ = app_handle.emit("serial_rx", &temp_buf[..n]);
 
-                    let mut start = 0;
-                    while start + 22 <= pos {
-                        if buf[start] == 0xAA && buf[start + 1] == 0xBB {
-                            let frame_data = &buf[start..start + 22];
-                            match protocol::FeedbackFrame::parse(frame_data) {
-                                Ok(frame) => {
-                                    let _ = app_handle.emit("serial_rx", frame_data);
-                                    let rs = RobotState::from_feedback(&frame);
-                                    let _ = app_handle.emit("robot_state_update", &rs);
-                                    start += 22;
-                                    continue;
+                        if pos + n > buf.len() {
+                            pos = 0;
+                            continue;
+                        }
+                        buf[pos..pos + n].copy_from_slice(&temp_buf[..n]);
+                        pos += n;
+
+                        let mut start = 0;
+                        while start + 22 <= pos {
+                            if buf[start] == 0xAA && buf[start + 1] == 0xBB {
+                                let frame_data = &buf[start..start + 22];
+                                match protocol::FeedbackFrame::parse(frame_data) {
+                                    Ok(frame) => {
+                                        let rs = RobotState::from_feedback(&frame);
+                                        let _ = app_handle.emit("robot_state_update", &rs);
+                                        start += 22;
+                                        continue;
+                                    }
+                                    Err(protocol::ParseError::Incomplete) => break,
+                                    Err(_) => start += 1,
                                 }
-                                Err(protocol::ParseError::Incomplete) => break,
-                                Err(_) => start += 1,
+                            } else {
+                                start += 1;
                             }
-                        } else {
-                            start += 1;
+                        }
+
+                        if start > 0 && start < pos {
+                            let remaining = pos - start;
+                            buf.copy_within(start..pos, 0);
+                            pos = remaining;
+                        } else if start > 0 {
+                            pos = 0;
                         }
                     }
-
-                    if start > 0 && start < pos {
-                        let remaining = pos - start;
-                        buf.copy_within(start..pos, 0);
-                        pos = remaining;
-                    } else if start > 0 {
-                        pos = 0;
-                    }
+                    Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => continue,
+                    Err(_) => break,
                 }
-                Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => continue,
-                Err(_) => break,
             }
-        }
 
-        let _ = app_handle.emit("connection_status", "disconnected");
-    });
+            let _ = app_handle.emit("connection_status", "disconnected");
+        });
+    }
 
     let mut status = state.connection_status.lock().map_err(|e| e.to_string())?;
     *status = ConnectionStatus::Connected;
@@ -126,12 +159,7 @@ fn disconnect_serial(state: State<AppState>) -> Result<(), String> {
 
 #[tauri::command]
 fn send_command(cmd: Command, state: State<AppState>, app_handle: AppHandle) -> Result<(), String> {
-    let timestamp = {
-        let mut counter = state.timestamp_counter.lock().map_err(|e| e.to_string())?;
-        let ts = *counter;
-        *counter += 1;
-        ts
-    };
+    let timestamp = state.start_time.elapsed().as_millis() as u32;
 
     let data = cmd.encode(timestamp);
 
@@ -273,7 +301,7 @@ pub fn run() {
         tx: Mutex::new(None),
         robot_state: Mutex::new(RobotState::default()),
         connection_status: Mutex::new(ConnectionStatus::Disconnected),
-        timestamp_counter: Mutex::new(0),
+        start_time: Instant::now(),
     };
 
     tauri::Builder::default()
