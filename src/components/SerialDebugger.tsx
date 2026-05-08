@@ -254,17 +254,19 @@ export function SerialDebugger() {
   const rxBufferRef = useRef<number[]>([]);
   const [rxTotalBytes, setRxTotalBytes] = useState(0);
   const [validFdbCount, setValidFdbCount] = useState(0);
+  const [validCtlEchoCount, setValidCtlEchoCount] = useState(0);
 
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
 
-  // Drain frames from the rx buffer.  Valid feedback frames are counted but
-  // not displayed (too noisy at 1+ kHz).  Every other frame — invalid CRC,
-  // wrong length, or a 21-byte CTL candidate — is shown in red.
+  // Drain frames from the rx buffer.  Valid feedback frames and valid control
+  // echoes (serial hardware loopback) are counted but not displayed.  Invalid
+  // frames are shown in red.
   const drainRxBuffer = (buffer: number[]) => {
     const invalidFrames: number[][] = [];
     let validFdbCount = 0;
+    let validCtlEchoCount = 0;
     let start = 0;
     while (start + 21 <= buffer.length) {
       if (buffer[start] === 0xAA && buffer[start + 1] === 0xBB) {
@@ -273,25 +275,36 @@ export function SerialDebugger() {
           const analysis = analyzeFrame(candidate);
           if (analysis.valid && analysis.frameType === 'feedback') {
             validFdbCount++;
-          } else {
-            invalidFrames.push(candidate);
+            start += 22;
+            continue;
           }
-          start += 22;
+          // CRC failed — advance by 1 to find next header (real frames may
+          // have been smushed together in one read chunk)
+          invalidFrames.push(candidate);
+          start += 1;
           continue;
         }
-        // Only 21 bytes available — emit as a candidate control frame.
-        invalidFrames.push(buffer.slice(start, start + 21));
-        start += 21;
+        // Only 21 bytes available — check if it's a valid CTL echo
+        const candidate = buffer.slice(start, start + 21);
+        const analysis = analyzeFrame(candidate);
+        if (analysis.valid && analysis.frameType === 'control') {
+          validCtlEchoCount++;
+          start += 21;
+          continue;
+        }
+        invalidFrames.push(candidate);
+        start += 1;
         continue;
       }
       start += 1;
     }
-    return { invalidFrames, validFdbCount, consumed: start };
+    return { invalidFrames, validFdbCount, validCtlEchoCount, consumed: start };
   };
 
   useEffect(() => {
     let unlistenTx: UnlistenFn | null = null;
     let unlistenRx: UnlistenFn | null = null;
+    let unlistenCs: UnlistenFn | null = null;
     let cancelled = false;
 
     const appendTx = (bytes: number[]) => {
@@ -312,7 +325,7 @@ export function SerialDebugger() {
       if (pausedRef.current) return;
       setRxTotalBytes((n) => n + bytes.length);
       rxBufferRef.current.push(...bytes);
-      const { invalidFrames, validFdbCount: newValid, consumed } = drainRxBuffer(rxBufferRef.current);
+      const { invalidFrames, validFdbCount: newValid, validCtlEchoCount: newCtl, consumed } = drainRxBuffer(rxBufferRef.current);
       if (consumed > 0) {
         rxBufferRef.current = rxBufferRef.current.slice(consumed);
       }
@@ -322,6 +335,9 @@ export function SerialDebugger() {
       }
       if (newValid > 0) {
         setValidFdbCount((n) => n + newValid);
+      }
+      if (newCtl > 0) {
+        setValidCtlEchoCount((n) => n + newCtl);
       }
       if (invalidFrames.length > 0) {
         const now = new Date();
@@ -351,12 +367,23 @@ export function SerialDebugger() {
       const rx = await listen<number[]>('serial_rx', (e) => appendRxRaw(e.payload));
       if (cancelled) { rx(); return; }
       unlistenRx = rx;
+      const cs = await listen<string>('connection_status', (e) => {
+        if (e.payload === 'disconnected') {
+          rxBufferRef.current = [];
+          setRxTotalBytes(0);
+          setValidFdbCount(0);
+          setValidCtlEchoCount(0);
+        }
+      });
+      if (cancelled) { cs(); return; }
+      unlistenCs = cs;
     })();
 
     return () => {
       cancelled = true;
       unlistenTx?.();
       unlistenRx?.();
+      unlistenCs?.();
     };
   }, []);
 
@@ -389,7 +416,7 @@ export function SerialDebugger() {
           {paused ? '已暂停' : '暂停'}
         </button>
         <button
-          onClick={() => { setEntries([]); setRxTotalBytes(0); setValidFdbCount(0); }}
+          onClick={() => { setEntries([]); setRxTotalBytes(0); setValidFdbCount(0); setValidCtlEchoCount(0); }}
           className="px-2 py-1 rounded bg-gray-500 text-white hover:bg-gray-600"
         >
           清空
@@ -412,7 +439,7 @@ export function SerialDebugger() {
           自动滚动
         </label>
         <span className="ml-auto text-text-secondary font-mono">
-          <span className="text-success">FDB {validFdbCount}</span> | 错误帧 {entries.length} | {rxTotalBytes} B
+          <span className="text-success">FDB {validFdbCount}</span> · <span className="text-primary">CTL {validCtlEchoCount}</span> | 错误帧 {entries.length} | {rxTotalBytes} B
         </span>
       </div>
 

@@ -21,6 +21,8 @@ const W_MAX_LIMIT = 460;
 const AW_DEFAULT = 70;
 const AW_MAX_LIMIT = 170;
 
+const SEND_INTERVAL = 50;
+
 export function WasdVelocityControl() {
   const { send } = useCommand();
   const [vMax, setVMax] = useState(V_DEFAULT);
@@ -31,28 +33,76 @@ export function WasdVelocityControl() {
   const keysRef = useRef<KeyState>({ ...initialKeys });
   const [keyDisplay, setKeyDisplay] = useState<KeyState>({ ...initialKeys });
   const lastSentRef = useRef<{ vx: number; vy: number; wz: number }>({ vx: 0, vy: 0, wz: 0 });
+  const sendingRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const sendVelocity = useCallback(
-    async (vx: number, vy: number, wz: number) => {
+  const vMaxRef = useRef(vMax);
+  const wMaxRef = useRef(wMax);
+  vMaxRef.current = vMax;
+  wMaxRef.current = wMax;
+
+  const anyKeyHeld = useCallback(() => {
+    const k = keysRef.current;
+    return k.w || k.a || k.s || k.d || k.q || k.e;
+  }, []);
+
+  const sendCurrentVelocity = useCallback(
+    (vMax: number, wMax: number) => {
+      const k = keysRef.current;
+      let vx = 0;
+      let vy = 0;
+      let wz = 0;
+      if (k.w) vx += vMax;
+      if (k.s) vx -= vMax;
+      if (k.a) vy += vMax;
+      if (k.d) vy -= vMax;
+      if (k.q) wz += wMax;
+      if (k.e) wz -= wMax;
+
       const last = lastSentRef.current;
       const isZero = vx === 0 && vy === 0 && wz === 0;
       const lastZero = last.vx === 0 && last.vy === 0 && last.wz === 0;
       if (isZero && lastZero) return;
       lastSentRef.current = { vx, vy, wz };
-      try {
-        await send({ type: 'SetMasterChassisVelocity', vx, vy, wz });
-      } catch (e) {
-        console.error(e);
-      }
+      send({ type: 'SetMasterChassisVelocity', vx, vy, wz }).catch(console.error);
     },
     [send]
   );
 
+  const startSending = useCallback(() => {
+    if (sendingRef.current) return;
+    sendingRef.current = true;
+    sendCurrentVelocity(vMaxRef.current, wMaxRef.current);
+    intervalRef.current = setInterval(() => {
+      sendCurrentVelocity(vMaxRef.current, wMaxRef.current);
+    }, SEND_INTERVAL);
+  }, [sendCurrentVelocity]);
+
+  const stopSending = useCallback(() => {
+    if (!sendingRef.current) return;
+    sendingRef.current = false;
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    keysRef.current = { ...initialKeys };
+    setKeyDisplay({ ...initialKeys });
+    lastSentRef.current = { vx: 0, vy: 0, wz: 0 };
+    send({ type: 'SetMasterChassisVelocity', vx: 0, vy: 0, wz: 0 }).catch(console.error);
+  }, [send]);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!enabled) {
-      keysRef.current = { ...initialKeys };
-      setKeyDisplay({ ...initialKeys });
-      sendVelocity(0, 0, 0);
+      stopSending();
       return;
     }
 
@@ -67,8 +117,13 @@ export function WasdVelocityControl() {
       const key = e.key.toLowerCase();
       if (key in keysRef.current) {
         e.preventDefault();
+        if (e.repeat) return;
+        const wasHeld = anyKeyHeld();
         keysRef.current[key as keyof KeyState] = true;
         setKeyDisplay({ ...keysRef.current });
+        if (!wasHeld) {
+          startSending();
+        }
       }
     };
 
@@ -78,12 +133,14 @@ export function WasdVelocityControl() {
         e.preventDefault();
         keysRef.current[key as keyof KeyState] = false;
         setKeyDisplay({ ...keysRef.current });
+        if (!anyKeyHeld()) {
+          stopSending();
+        }
       }
     };
 
     const handleBlur = () => {
-      keysRef.current = { ...initialKeys };
-      setKeyDisplay({ ...initialKeys });
+      stopSending();
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -94,26 +151,9 @@ export function WasdVelocityControl() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
+      stopSending();
     };
-  }, [enabled, sendVelocity]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    const interval = setInterval(() => {
-      const k = keysRef.current;
-      let vx = 0;
-      let vy = 0;
-      let wz = 0;
-      if (k.w) vx += vMax;
-      if (k.s) vx -= vMax;
-      if (k.a) vy += vMax;
-      if (k.d) vy -= vMax;
-      if (k.q) wz += wMax;
-      if (k.e) wz -= wMax;
-      sendVelocity(vx, vy, wz);
-    }, 50);
-    return () => clearInterval(interval);
-  }, [enabled, vMax, wMax, sendVelocity]);
+  }, [enabled, anyKeyHeld, startSending, stopSending]);
 
   const KeyBadge = ({ keyName, label, active }: { keyName: string; label: string; active: boolean }) => (
     <div
