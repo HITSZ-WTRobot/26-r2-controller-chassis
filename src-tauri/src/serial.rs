@@ -147,7 +147,7 @@ impl SerialConnection {
     }
 }
 
-use serialport::{SerialPortType, available_ports};
+use tokio_serial::{SerialPortType, available_ports};
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct PortInfo {
