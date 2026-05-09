@@ -8,7 +8,7 @@ This is a Tauri 2.x desktop application with a React 19 + TypeScript frontend an
 
 ## Git Workflow
 
-Commit in logical batches at reasonable checkpoints during development — don't wait for the whole task to finish, and don't commit every tiny edit. A good commit boundary is a coherent feature/fix/refactor that builds and passes type-check on its own. Split a session's work into multiple commits when it touches unrelated concerns (e.g., backend changes + separate frontend feature). Always verify `bun run build` passes before committing frontend changes; `cargo check` for backend changes. When working with an AI assistant, ask it to commit at appropriate development milestones rather than only at the end of a session.
+Commit in logical batches at reasonable checkpoints during development — don't wait for the whole task to finish, and don't commit every tiny edit. A good commit boundary is a coherent feature/fix/refactor that builds and passes type-check on its own. Split a session's work into multiple commits when it touches unrelated concerns (e.g., backend changes + separate frontend feature). Always verify `bun run build` passes before committing frontend changes; `cargo check` for backend changes. When working with an AI assistant, ask it to commit at appropriate development milestones rather than only at the end of a session. When changes are sufficient to form a coherent commit, commit immediately without waiting for the user to ask.
 
 ## Build Commands
 
