@@ -8,7 +8,7 @@ This is a Tauri 2.x desktop application with a React 19 + TypeScript frontend an
 
 ## Git Workflow
 
-Commit in logical batches at reasonable checkpoints — don't wait for the whole task to finish, and don't commit every tiny edit. A good commit boundary is a coherent feature/fix/refactor that builds and passes type-check on its own. Split a session's work into multiple commits when it touches unrelated concerns (e.g., backend changes + separate frontend feature). Always verify `bun run build` passes before committing frontend changes; `cargo check` for backend changes.
+Commit in logical batches at reasonable checkpoints during development — don't wait for the whole task to finish, and don't commit every tiny edit. A good commit boundary is a coherent feature/fix/refactor that builds and passes type-check on its own. Split a session's work into multiple commits when it touches unrelated concerns (e.g., backend changes + separate frontend feature). Always verify `bun run build` passes before committing frontend changes; `cargo check` for backend changes. When working with an AI assistant, ask it to commit at appropriate development milestones rather than only at the end of a session.
 
 ## Build Commands
 
@@ -67,7 +67,7 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 | Control frame | 21 bytes (header2 + cmd1 + data12 + timestamp4 + crc2) |
 | Feedback frame | 22 bytes (header2 + timestamp4 + x2 + y2 + yaw2 + frontH2 + rearH2 + action2 + conn2 + crc2) |
 | CRC | CRC16-Modbus (poly=0x8005, reflected=0xA001, init=0xFFFF, refin=true, refout=true, xorout=0x0000) — LSB-first processing uses reflected poly 0xA001, no final reversal needed |
-| Timestamp sync | First 49 frames only sync, no control execution |
+| CRC scope | From `cmd` byte to end of `tx_timestamp` (excludes header and CRC) |
 
 ### Scaling Rules
 
@@ -75,9 +75,12 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 |----------|----------|
 | Position x/y | `int16 = value_m * 2000` |
 | Yaw | `int16 = value_deg * 100` |
+| Grip joint angle `arm_pos/turn_pos` | `int16 = value_deg * 100` |
 | Velocity vx/vy | `int16 = value_mps * 2000` |
 | Angular velocity wz | `int16 = value_degps * 100` |
 | Chassis height | `int16 = height_m * 2000` |
+| `xy_vmax / xy_amax` | `uint12 = value * 200` |
+| `yaw_vmax / yaw_amax` | `uint12 = value` |
 
 ### Command List (0x01-0x43)
 
@@ -85,18 +88,33 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 |-----|------|------|
 | `0x01` | Ping | - |
 | `0x10` | StopChassis | - |
-| `0x11` | SetChassisHeight | height, v_max, a_max, j_max, link_mode |
-| `0x13` | SetMasterChassisTargetCurrentState | x, y, yaw, xy_vmax, xy_amax, yaw_vmax, yaw_amax |
+| `0x11` | SetChassisHeight | chassisHeight, v_max, a_max, j_max, linkMode |
+| `0x12` | SlavePushChassisTrajectory | x, y, yaw, vx, vy, wz (固件保留，处理为空) |
+| `0x13` | SetMasterChassisTargetCurrentState | x, y, yaw, xy_vmax(uint12), xy_amax(uint12), yaw_vmax(uint12), yaw_amax(uint12) |
 | `0x14` | SetMasterChassisTargetPreviousCurve | same as 0x13 |
-| `0x15` | SetMasterChassisVelocity | vx, vy, wz |
+| `0x15` | SetMasterChassisVelocity | vx, vy, wz, reserve×3 |
+| `0x16` | SetGripPose | arm_pos(deg*100), turn_pos(deg*100), clawMode(0=keep,1=open,2=close), reserve×3 |
+| `0x17` | SetGripPresetPose | presetId(0-6), reserve×5 |
 | `0x21` | LidarPosture | x, y, yaw, lidar_timestamp |
 | `0x30` | StepUp | startDist, endDist, direction, willTake |
 | `0x31` | StepUpResume | - |
 | `0x32` | StepDown | startDist, endDist, direction, shouldReset |
 | `0x40` | TakeSpear | target(x,y,yaw), end(x,y,yaw) |
-| `0x41` | TakeSpearById | spearId(0-5), end(x,y,yaw) |
+| `0x41` | TakeSpearById | spearId(0-5), end(x,y,yaw), reserve×2 |
 | `0x42` | StoreKFS | - |
 | `0x43` | ReleaseKFS | - |
+
+### SetGripPresetPose Presets
+
+| presetId | Name | Call |
+|----------|------|------|
+| `0` | Standby | `Grip::toStandbyPose()` |
+| `1` | PrepareGrab | `Grip::toPrepareGrabPose()` |
+| `2` | Grab | `Grip::toGrabPose()` |
+| `3` | Docking | `Grip::toDockingPose()` |
+| `4` | KfsPickup | `Grip::toKfsPickupPose()` |
+| `5` | KfsStore | `Grip::toKfsStorePose()` |
+| `6` | KfsRelease | `Grip::toKfsReleasePose()` |
 
 ### Feedback Fields
 
@@ -105,14 +123,26 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 - `yaw`: int16 / 100 → degrees
 - `frontHeight, rearHeight`: int16 / 2000 → meters
 - `action_state`: bitfield (StepStatus bit0-1, ChassisMode bit2-3, ChassisCurveFinished bit4, LiftStatus bit5-6, GripStatus bit7-9, GripSuctionHasObject bit10)
-- `connection_state`: bitfield (wheel0-3, lift0-3, grip_arm, grip_turn, gyro_yaw, bit14=localization stream, bit15=upper_host link)
+- `connection_state`: bitfield (wheel0-3, lift0-3, grip_arm, grip_turn, gyro_yaw, bit11-13 reserved, bit14=localization stream, bit15=upper_host link)
+
+### GripStatus Values (bit7-9)
+
+| Value | Enum | Meaning |
+|-------|------|---------|
+| `0` | Calibrating | Grip 初始化/未校准完成 |
+| `1` | TakingSpear | 取矛头动作执行中 |
+| `2` | KfsStore | 卷轴临时存放执行中 |
+| `3` | KfsRelease | 卷轴释放执行中 |
+| `4` | Idle | 当前无 Grip 动作 |
+| `5` | Done | 最近一次 Grip 动作已完成 |
 
 ### Key Behavior Constraints
 
-1. First 49 frames only timestamp sync, control execution starts from frame 50
-2. bit14 (localization stream) requires valid LidarPosture within 200 watchdog ticks
+1. CRC 校验通过后立即执行命令，不再保留"前 49 帧仅对时"预热窗口
+2. bit14 (localization stream) requires valid LidarPosture from main upper-host link with stable time sync; watchdog timeout at 200 ticks
 3. bit15 (upper_host) indicates UART link status
-4. TakeSpear requires end_pos x-distance > 0.20m from target
+4. TakeSpear requires end_pos x-distance > 0.20m from target (SafeDistance)
+5. SetGripPose/SetGripPresetPose only effective when `PROJECT_PART_ENABLE_PC_CONTROL=1` and `PROJECT_PART_ENABLE_GRIP=1`
 
 ### Backend Modules
 

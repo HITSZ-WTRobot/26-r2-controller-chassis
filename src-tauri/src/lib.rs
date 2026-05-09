@@ -106,6 +106,8 @@ cmd!(step_up_resume, StepUpResume);
 cmd!(step_down, StepDown, start_distance: f32, end_distance: f32, direction: u16, should_reset: u16);
 cmd!(take_spear, TakeSpear, target_x: f32, target_y: f32, target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32);
 cmd!(take_spear_by_id, TakeSpearById, spear_id: u16, end_x: f32, end_y: f32, end_yaw: f32);
+cmd!(set_grip_pose, SetGripPose, arm_pos: f32, turn_pos: f32, claw_mode: u16);
+cmd!(set_grip_preset_pose, SetGripPresetPose, preset_id: u16);
 cmd!(store_kfs, StoreKFS);
 cmd!(release_kfs, ReleaseKFS);
 
@@ -158,6 +160,8 @@ pub fn run() {
             take_spear_by_id,
             store_kfs,
             release_kfs,
+            set_grip_pose,
+            set_grip_preset_pose,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

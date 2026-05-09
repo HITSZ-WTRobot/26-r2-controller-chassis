@@ -10,6 +10,8 @@ pub enum Command {
     SetMasterChassisTargetCurrentState { x: f32, y: f32, yaw: f32, xy_vmax: f32, xy_amax: f32, yaw_vmax: f32, yaw_amax: f32 },
     SetMasterChassisTargetPreviousCurve { x: f32, y: f32, yaw: f32, xy_vmax: f32, xy_amax: f32, yaw_vmax: f32, yaw_amax: f32 },
     SetMasterChassisVelocity { vx: f32, vy: f32, wz: f32 },
+    SetGripPose { arm_pos: f32, turn_pos: f32, claw_mode: u16 },
+    SetGripPresetPose { preset_id: u16 },
     LidarPosture { x: f32, y: f32, yaw: f32, lidar_timestamp: u32 },
     StepUp { start_distance: f32, end_distance: f32, direction: u16, will_take: u16 },
     StepUpResume,
@@ -89,6 +91,28 @@ impl Command {
                 data[4..6].copy_from_slice(&scale_wz(*wz).to_be_bytes());
                 let frame = CommandFrame {
                     cmd: 0x15,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::SetGripPose { arm_pos, turn_pos, claw_mode } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&scale_yaw(*arm_pos).to_be_bytes());
+                data[2..4].copy_from_slice(&scale_yaw(*turn_pos).to_be_bytes());
+                data[4..6].copy_from_slice(&claw_mode.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x16,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::SetGripPresetPose { preset_id } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&preset_id.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x17,
                     data,
                     tx_timestamp: timestamp,
                 };

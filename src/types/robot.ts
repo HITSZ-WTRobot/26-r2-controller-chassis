@@ -61,4 +61,6 @@ export type Command =
   | { type: 'TakeSpear'; target_x: number; target_y: number; target_yaw: number; end_x: number; end_y: number; end_yaw: number }
   | { type: 'TakeSpearById'; spear_id: number; end_x: number; end_y: number; end_yaw: number }
   | { type: 'StoreKFS' }
-  | { type: 'ReleaseKFS' };
+  | { type: 'ReleaseKFS' }
+  | { type: 'SetGripPose'; arm_pos: number; turn_pos: number; claw_mode: number }
+  | { type: 'SetGripPresetPose'; preset_id: number };

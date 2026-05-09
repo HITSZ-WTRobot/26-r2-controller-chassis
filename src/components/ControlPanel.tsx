@@ -215,6 +215,14 @@ export function GripControl() {
   const [endY, setEndY] = useState(0);
   const [endYaw, setEndYaw] = useState(0);
 
+  // GripPose state
+  const [armPos, setArmPos] = useState(0);
+  const [turnPos, setTurnPos] = useState(0);
+  const [clawMode, setClawMode] = useState(0);
+
+  // GripPresetPose state
+  const [presetId, setPresetId] = useState(0);
+
   const handleTake = async () => {
     if (mode === 'byId') {
       await send({
@@ -301,6 +309,69 @@ export function GripControl() {
           className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
         >
           释放 KFS
+        </button>
+      </div>
+
+      {/* SetGripPose (0x16) */}
+      <div className="border-t border-border pt-3 space-y-3">
+        <h4 className="text-sm font-semibold text-text">Grip 关节姿态 (0x16)</h4>
+        <InputRow label="大臂角 arm_pos (°)" value={armPos} onChange={setArmPos} step={0.1} />
+        <InputRow label="转向角 turn_pos (°)" value={turnPos} onChange={setTurnPos} step={0.1} />
+        <div>
+          <label className="text-sm text-text-secondary block mb-1">夹爪模式</label>
+          <RadioGroup
+            value={clawMode}
+            onChange={setClawMode}
+            options={[
+              { value: 0, label: '保持' },
+              { value: 1, label: '张开' },
+              { value: 2, label: '闭合' },
+            ]}
+          />
+        </div>
+        <button
+          onClick={() => send({ type: 'SetGripPose', arm_pos: armPos, turn_pos: turnPos, claw_mode: clawMode })}
+          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full"
+        >
+          发送关节姿态
+        </button>
+      </div>
+
+      {/* SetGripPresetPose (0x17) */}
+      <div className="border-t border-border pt-3 space-y-3">
+        <h4 className="text-sm font-semibold text-text">Grip 预设姿态 (0x17)</h4>
+        <div>
+          <label className="text-sm text-text-secondary block mb-1">预设</label>
+          <div className="flex flex-wrap gap-1">
+            {[
+              { id: 0, label: 'Standby' },
+              { id: 1, label: 'PrepareGrab' },
+              { id: 2, label: 'Grab' },
+              { id: 3, label: 'Docking' },
+              { id: 4, label: 'KfsPickup' },
+              { id: 5, label: 'KfsStore' },
+              { id: 6, label: 'KfsRelease' },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPresetId(p.id)}
+                className={`px-2 py-1 text-xs rounded border transition-colors ${
+                  presetId === p.id
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-surface text-text border-border hover:bg-bg'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button
+          onClick={() => send({ type: 'SetGripPresetPose', preset_id: presetId })}
+          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full"
+        >
+          发送预设 ({presetId})
         </button>
       </div>
     </div>
