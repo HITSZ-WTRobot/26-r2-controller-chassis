@@ -32,7 +32,11 @@ export function Tabs({ tabs, defaultTab }: TabsProps) {
         ))}
       </div>
       <div className="p-4">
-        {tabs.find((t) => t.id === activeTab)?.content}
+        {tabs.map((tab) => (
+          <div key={tab.id} className={activeTab === tab.id ? '' : 'hidden'}>
+            {tab.content}
+          </div>
+        ))}
       </div>
     </div>
   );

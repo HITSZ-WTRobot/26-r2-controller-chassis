@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useCommand } from '../hooks/useSerial';
 import { VerticalSlider } from './VerticalSlider';
+import type { RobotState } from '../types/robot';
 
 const HEIGHT_MIN = 0.195;
 const HEIGHT_MAX = 0.595;
@@ -13,11 +14,16 @@ const LIFT_V_MAX_LIMIT = 1.178;
 const LIFT_A_DEFAULT = 5.0;
 const LIFT_A_MAX_LIMIT = 5.0;
 
-export function HeightControl() {
+interface HeightControlProps {
+  state: RobotState | null;
+}
+
+export function HeightControl({ state }: HeightControlProps) {
   const { send } = useCommand();
   const [height, setHeight] = useState(HEIGHT_MIN);
   const [vMax, setVMax] = useState(LIFT_V_DEFAULT);
   const [aMax, setAMax] = useState(LIFT_A_DEFAULT);
+  const [immediateSend, setImmediateSend] = useState(true);
 
   const lastSendTs = useRef(0);
   const pendingTimer = useRef<number | null>(null);
@@ -64,7 +70,7 @@ export function HeightControl() {
     const c = clamp(v);
     setHeight(c);
     latestParams.current.height = c;
-    scheduleSend();
+    if (immediateSend) scheduleSend();
   };
 
   const handleVMaxChange = (v: number) => {
@@ -79,11 +85,44 @@ export function HeightControl() {
     latestParams.current.aMax = c;
   };
 
+  const handleUseCurrentHeight = () => {
+    if (state) {
+      const h = clamp(state.front_height);
+      setHeight(h);
+      latestParams.current.height = h;
+      if (immediateSend) scheduleSend();
+    }
+  };
+
+  const handleManualSend = () => {
+    doSend();
+  };
+
   const pct = ((height - HEIGHT_MIN) / (HEIGHT_MAX - HEIGHT_MIN)) * 100;
 
   return (
     <div className="space-y-4">
-      <h3 className="text-md font-semibold text-text">底盘高度控制 (即时生效)</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-md font-semibold text-text">底盘高度控制</h3>
+        <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none">
+          <span>即时发送</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={immediateSend}
+            onClick={() => setImmediateSend(!immediateSend)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              immediateSend ? 'bg-primary' : 'bg-gray-500'
+            }`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                immediateSend ? 'translate-x-[1.125rem]' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        </label>
+      </div>
       <div className="flex gap-4 items-stretch">
         <div className="flex flex-col items-center gap-2 shrink-0 py-1">
           <span className="text-xs text-text-secondary font-mono">{HEIGHT_MAX.toFixed(3)}</span>
@@ -100,10 +139,20 @@ export function HeightControl() {
 
         <div className="flex-1 space-y-3">
           <div>
-            <label className="text-sm text-text-secondary block mb-1">
-              当前高度 <span className="font-mono text-text">{height.toFixed(3)} m</span>
-              <span className="ml-2 text-text-secondary">({pct.toFixed(0)}%)</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm text-text-secondary">
+                当前高度 <span className="font-mono text-text">{height.toFixed(3)} m</span>
+                <span className="ml-2 text-text-secondary">({pct.toFixed(0)}%)</span>
+              </label>
+              <button
+                type="button"
+                onClick={handleUseCurrentHeight}
+                disabled={!state}
+                className="text-xs px-2 py-0.5 rounded border border-border bg-surface text-text-secondary hover:text-text hover:bg-bg disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                使用当前
+              </button>
+            </div>
             <input
               type="number"
               step={HEIGHT_STEP}
@@ -132,6 +181,15 @@ export function HeightControl() {
             max={LIFT_A_MAX_LIMIT}
             step={0.05}
           />
+          {!immediateSend && (
+            <button
+              type="button"
+              onClick={handleManualSend}
+              className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full text-sm"
+            >
+              发送
+            </button>
+          )}
         </div>
       </div>
       <p className="text-xs text-text-secondary">
@@ -398,6 +456,126 @@ export function SystemControl() {
           紧急停止
         </button>
       </div>
+    </div>
+  );
+}
+
+interface PostureControlProps {
+  state: RobotState | null;
+}
+
+const POSTURE_XY_VMAX_DEFAULT = 3.0;
+const POSTURE_XY_AMAX_DEFAULT = 3.0;
+const POSTURE_YAW_VMAX_DEFAULT = 180;
+const POSTURE_YAW_AMAX_DEFAULT = 180;
+
+export function PostureControl({ state }: PostureControlProps) {
+  const { send } = useCommand();
+  const [x, setX] = useState(0);
+  const [y, setY] = useState(0);
+  const [yaw, setYaw] = useState(0);
+  const [xyVmax, setXyVmax] = useState(POSTURE_XY_VMAX_DEFAULT);
+  const [xyAmax, setXyAmax] = useState(POSTURE_XY_AMAX_DEFAULT);
+  const [yawVmax, setYawVmax] = useState(POSTURE_YAW_VMAX_DEFAULT);
+  const [yawAmax, setYawAmax] = useState(POSTURE_YAW_AMAX_DEFAULT);
+
+  const handleUseCurrent = () => {
+    if (state) {
+      setX(state.x);
+      setY(state.y);
+      setYaw(state.yaw);
+    }
+  };
+
+  const handleSend = async () => {
+    try {
+      await send({
+        type: 'SetMasterChassisTargetCurrentState',
+        x,
+        y,
+        yaw,
+        xy_vmax: xyVmax,
+        xy_amax: xyAmax,
+        yaw_vmax: yawVmax,
+        yaw_amax: yawAmax,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-md font-semibold text-text">位姿控制 (SetMasterChassisTargetCurrentState)</h3>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-sm text-text-secondary">目标位姿</label>
+          <button
+            type="button"
+            onClick={handleUseCurrent}
+            disabled={!state}
+            className="text-xs px-2 py-0.5 rounded border border-border bg-surface text-text-secondary hover:text-text hover:bg-bg disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            使用当前位置
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <NumField label="X (m)" step={0.01} value={x} onChange={setX} />
+          <NumField label="Y (m)" step={0.01} value={y} onChange={setY} />
+          <NumField label="Yaw (°)" step={0.1} value={yaw} onChange={setYaw} />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm text-text-secondary block mb-1">运动参数</label>
+        <div className="grid grid-cols-2 gap-3">
+          <SliderRow
+            label="XY 最大速度"
+            unit="m/s"
+            value={xyVmax}
+            onChange={setXyVmax}
+            min={0}
+            max={8}
+            step={0.1}
+          />
+          <SliderRow
+            label="XY 最大加速度"
+            unit="m/s²"
+            value={xyAmax}
+            onChange={setXyAmax}
+            min={0}
+            max={3}
+            step={0.05}
+          />
+          <SliderRow
+            label="Yaw 最大速度"
+            unit="°/s"
+            value={yawVmax}
+            onChange={setYawVmax}
+            min={0}
+            max={460}
+            step={1}
+          />
+          <SliderRow
+            label="Yaw 最大加速度"
+            unit="°/s²"
+            value={yawAmax}
+            onChange={setYawAmax}
+            min={0}
+            max={170}
+            step={1}
+          />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleSend}
+        className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full"
+      >
+        发送位姿指令
+      </button>
     </div>
   );
 }

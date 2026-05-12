@@ -2,7 +2,7 @@ import { ConnectionPanel } from './ConnectionPanel';
 import { StatusDisplay } from './StatusDisplay';
 import { ActionStatePanel } from './ActionStatePanel';
 import { ConnectionMap } from './ConnectionMap';
-import { HeightControl, StepControl, GripControl, SystemControl } from './ControlPanel';
+import { HeightControl, StepControl, GripControl, SystemControl, PostureControl } from './ControlPanel';
 import { WasdVelocityControl } from './WasdVelocityControl';
 import { Tabs } from './Tabs';
 import { SerialDebugger } from './SerialDebugger';
@@ -20,9 +20,14 @@ export function Layout({ state }: LayoutProps) {
       content: (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <WasdVelocityControl />
-          <HeightControl />
+          <HeightControl state={state} />
         </div>
       ),
+    },
+    {
+      id: 'posture',
+      label: '位姿控制',
+      content: <PostureControl state={state} />,
     },
     {
       id: 'step',
