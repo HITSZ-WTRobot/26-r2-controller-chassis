@@ -55,9 +55,11 @@ export type Command =
   | { type: 'SetMasterChassisTargetCurrentState'; x: number; y: number; yaw: number; xy_vmax: number; xy_amax: number; yaw_vmax: number; yaw_amax: number }
   | { type: 'SetMasterChassisVelocity'; vx: number; vy: number; wz: number }
   | { type: 'LidarPosture'; x: number; y: number; yaw: number; lidar_timestamp: number }
-  | { type: 'StepUp'; start_distance: number; end_distance: number; direction: number; will_take: number }
+  | { type: 'StepUp200'; start_distance: number; end_distance: number; direction: number; will_take: number }
   | { type: 'StepUpResume' }
-  | { type: 'StepDown'; start_distance: number; end_distance: number; direction: number; should_reset: number }
+  | { type: 'StepDown200'; start_distance: number; end_distance: number; direction: number; should_reset: number }
+  | { type: 'StepUp400'; start_distance: number; end_distance: number; direction: number; will_take: number }
+  | { type: 'StepDown400'; start_distance: number; end_distance: number; direction: number; should_reset: number }
   | { type: 'TakeSpear'; target_x: number; target_y: number; target_yaw: number; end_x: number; end_y: number; end_yaw: number }
   | { type: 'TakeSpearById'; spear_id: number; end_x: number; end_y: number; end_yaw: number }
   | { type: 'StoreKFS' }

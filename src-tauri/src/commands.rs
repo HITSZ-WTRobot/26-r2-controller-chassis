@@ -13,9 +13,11 @@ pub enum Command {
     SetGripPose { arm_pos: f32, turn_pos: f32, claw_mode: u16 },
     SetGripPresetPose { preset_id: u16 },
     LidarPosture { x: f32, y: f32, yaw: f32, lidar_timestamp: u32 },
-    StepUp { start_distance: f32, end_distance: f32, direction: u16, will_take: u16 },
+    StepUp200 { start_distance: f32, end_distance: f32, direction: u16, will_take: u16 },
     StepUpResume,
-    StepDown { start_distance: f32, end_distance: f32, direction: u16, should_reset: u16 },
+    StepDown200 { start_distance: f32, end_distance: f32, direction: u16, should_reset: u16 },
+    StepUp400 { start_distance: f32, end_distance: f32, direction: u16, will_take: u16 },
+    StepDown400 { start_distance: f32, end_distance: f32, direction: u16, should_reset: u16 },
     TakeSpear { target_x: f32, target_y: f32, target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32 },
     TakeSpearById { spear_id: u16, end_x: f32, end_y: f32, end_yaw: f32 },
     StoreKFS,
@@ -131,7 +133,7 @@ impl Command {
                 };
                 frame.encode()
             }
-            Command::StepUp { start_distance, end_distance, direction, will_take } => {
+            Command::StepUp200 { start_distance, end_distance, direction, will_take } => {
                 let mut data = [0u8; 12];
                 let sd = (start_distance * 2000.0) as i16;
                 let ed = (end_distance * 2000.0) as i16;
@@ -146,6 +148,21 @@ impl Command {
                 };
                 frame.encode()
             }
+            Command::StepUp400 { start_distance, end_distance, direction, will_take } => {
+                let mut data = [0u8; 12];
+                let sd = (start_distance * 2000.0) as i16;
+                let ed = (end_distance * 2000.0) as i16;
+                data[0..2].copy_from_slice(&sd.to_be_bytes());
+                data[2..4].copy_from_slice(&ed.to_be_bytes());
+                data[4..6].copy_from_slice(&direction.to_be_bytes());
+                data[6..8].copy_from_slice(&will_take.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x33,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
             Command::StepUpResume => {
                 let frame = CommandFrame {
                     cmd: 0x31,
@@ -154,7 +171,7 @@ impl Command {
                 };
                 frame.encode()
             }
-            Command::StepDown { start_distance, end_distance, direction, should_reset } => {
+            Command::StepDown200 { start_distance, end_distance, direction, should_reset } => {
                 let mut data = [0u8; 12];
                 let sd = (start_distance * 2000.0) as i16;
                 let ed = (end_distance * 2000.0) as i16;
@@ -164,6 +181,21 @@ impl Command {
                 data[6..8].copy_from_slice(&should_reset.to_be_bytes());
                 let frame = CommandFrame {
                     cmd: 0x32,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::StepDown400 { start_distance, end_distance, direction, should_reset } => {
+                let mut data = [0u8; 12];
+                let sd = (start_distance * 2000.0) as i16;
+                let ed = (end_distance * 2000.0) as i16;
+                data[0..2].copy_from_slice(&sd.to_be_bytes());
+                data[2..4].copy_from_slice(&ed.to_be_bytes());
+                data[4..6].copy_from_slice(&direction.to_be_bytes());
+                data[6..8].copy_from_slice(&should_reset.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x34,
                     data,
                     tx_timestamp: timestamp,
                 };

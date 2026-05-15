@@ -101,9 +101,11 @@ cmd!(set_chassis_height, SetChassisHeight, height: f32, v_max: f32, a_max: f32, 
 cmd!(set_master_chassis_target_current_state, SetMasterChassisTargetCurrentState, x: f32, y: f32, yaw: f32, xy_vmax: f32, xy_amax: f32, yaw_vmax: f32, yaw_amax: f32);
 cmd!(set_master_chassis_velocity, SetMasterChassisVelocity, vx: f32, vy: f32, wz: f32);
 cmd!(send_lidar_posture, LidarPosture, x: f32, y: f32, yaw: f32, lidar_timestamp: u32);
-cmd!(step_up, StepUp, start_distance: f32, end_distance: f32, direction: u16, will_take: u16);
+cmd!(step_up200, StepUp200, start_distance: f32, end_distance: f32, direction: u16, will_take: u16);
 cmd!(step_up_resume, StepUpResume);
-cmd!(step_down, StepDown, start_distance: f32, end_distance: f32, direction: u16, should_reset: u16);
+cmd!(step_down200, StepDown200, start_distance: f32, end_distance: f32, direction: u16, should_reset: u16);
+cmd!(step_up400, StepUp400, start_distance: f32, end_distance: f32, direction: u16, will_take: u16);
+cmd!(step_down400, StepDown400, start_distance: f32, end_distance: f32, direction: u16, should_reset: u16);
 cmd!(take_spear, TakeSpear, target_x: f32, target_y: f32, target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32);
 cmd!(take_spear_by_id, TakeSpearById, spear_id: u16, end_x: f32, end_y: f32, end_yaw: f32);
 cmd!(set_grip_pose, SetGripPose, arm_pos: f32, turn_pos: f32, claw_mode: u16);
@@ -153,9 +155,11 @@ pub fn run() {
             set_master_chassis_target_current_state,
             set_master_chassis_velocity,
             send_lidar_posture,
-            step_up,
+            step_up200,
             step_up_resume,
-            step_down,
+            step_down200,
+            step_up400,
+            step_down400,
             take_spear,
             take_spear_by_id,
             store_kfs,

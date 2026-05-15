@@ -204,13 +204,18 @@ export function StepControl() {
   const [startDist, setStartDist] = useState(0.5);
   const [endDist, setEndDist] = useState(0.5);
   const [direction, setDirection] = useState(0);
+  const [stepHeight, setStepHeight] = useState<'200mm' | '400mm'>('200mm');
+  const [willTake, setWillTake] = useState(false);
+  const [shouldReset, setShouldReset] = useState(true);
 
   const handleStepUp = async () => {
-    await send({ type: 'StepUp', start_distance: startDist, end_distance: endDist, direction, will_take: 0 });
+    const type = stepHeight === '200mm' ? 'StepUp200' : 'StepUp400';
+    await send({ type, start_distance: startDist, end_distance: endDist, direction, will_take: willTake ? 1 : 0 });
   };
 
   const handleStepDown = async () => {
-    await send({ type: 'StepDown', start_distance: startDist, end_distance: endDist, direction, should_reset: 1 });
+    const type = stepHeight === '200mm' ? 'StepDown200' : 'StepDown400';
+    await send({ type, start_distance: startDist, end_distance: endDist, direction, should_reset: shouldReset ? 1 : 0 });
   };
 
   const handleStepUpResume = async () => {
@@ -234,6 +239,53 @@ export function StepControl() {
             ]}
           />
         </div>
+        <div>
+          <label className="text-sm text-text-secondary block mb-1">台阶高度</label>
+          <RadioGroup
+            value={stepHeight}
+            onChange={setStepHeight}
+            options={[
+              { value: '200mm', label: '200mm' },
+              { value: '400mm', label: '400mm' },
+            ]}
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none">
+          <span>中途取卷轴 (will_take)</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={willTake}
+            onClick={() => setWillTake(!willTake)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              willTake ? 'bg-primary' : 'bg-gray-500'
+            }`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                willTake ? 'translate-x-[1.125rem]' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        </label>
+        <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none">
+          <span>下台阶后恢复高度 (should_reset)</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={shouldReset}
+            onClick={() => setShouldReset(!shouldReset)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              shouldReset ? 'bg-primary' : 'bg-gray-500'
+            }`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                shouldReset ? 'translate-x-[1.125rem]' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        </label>
       </div>
       <div className="grid grid-cols-3 gap-2">
         <button
