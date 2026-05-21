@@ -17,12 +17,14 @@ export interface ActionState {
   lift_status: LiftStatus;
   grip_status: GripStatus;
   grip_suction_has_object: boolean;
+  infrared_receiver_state: InfraredReceiverState;
 }
 
 export type StepStatus = 'Idle' | 'Done' | 'Running' | 'WaitingTake';
 export type ChassisMode = 'Stop' | 'Velocity' | 'Position' | 'Slave';
 export type LiftStatus = 'Calibrating' | 'Running' | 'Ready' | 'NotEnabled';
 export type GripStatus = 'Calibrating' | 'TakingSpear' | 'KfsStore' | 'KfsRelease' | 'Idle' | 'Done';
+export type InfraredReceiverState = 'KeepAlive' | 'DockingComplete' | 'NoAction' | 'Reserved';
 
 export interface ConnectionState {
   wheel_0: boolean;

@@ -21,6 +21,7 @@ pub struct ActionState {
     pub lift_status: LiftStatus,
     pub grip_status: GripStatus,
     pub grip_suction_has_object: bool,
+    pub infrared_receiver_state: InfraredReceiverState,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,6 +56,14 @@ pub enum GripStatus {
     KfsRelease,
     Idle,
     Done,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum InfraredReceiverState {
+    KeepAlive,
+    DockingComplete,
+    NoAction,
+    Reserved,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -111,6 +120,7 @@ impl Default for ActionState {
             lift_status: LiftStatus::Calibrating,
             grip_status: GripStatus::Calibrating,
             grip_suction_has_object: false,
+            infrared_receiver_state: InfraredReceiverState::KeepAlive,
         }
     }
 }
@@ -169,6 +179,13 @@ impl ActionState {
             _ => GripStatus::Calibrating,
         };
         let grip_suction_has_object = ((table >> 10) & 0x1) != 0;
+        let infrared_receiver_state = match (table >> 11) & 0x3 {
+            0 => InfraredReceiverState::KeepAlive,
+            1 => InfraredReceiverState::DockingComplete,
+            2 => InfraredReceiverState::NoAction,
+            3 => InfraredReceiverState::Reserved,
+            _ => InfraredReceiverState::KeepAlive,
+        };
         ActionState {
             step_status,
             chassis_mode,
@@ -176,6 +193,7 @@ impl ActionState {
             lift_status,
             grip_status,
             grip_suction_has_object,
+            infrared_receiver_state,
         }
     }
 }

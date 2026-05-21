@@ -25,6 +25,18 @@ const ROWS: Row[] = [
     get: (s) => (s.grip_suction_has_object ? '是' : '否'),
     highlight: (s) => (s.grip_suction_has_object ? 'text-success' : 'text-text-secondary'),
   },
+  {
+    label: '红外接收',
+    get: (s) => {
+      const map: Record<string, string> = {
+        KeepAlive: '保活 (0xA0)',
+        DockingComplete: '对接完成 (0xA1)',
+        NoAction: '无动作 (0xA2)',
+        Reserved: '预留 (0xA3)',
+      };
+      return map[s.infrared_receiver_state] ?? s.infrared_receiver_state;
+    },
+  },
 ];
 
 export function ActionStatePanel({ actionState }: ActionStatePanelProps) {
