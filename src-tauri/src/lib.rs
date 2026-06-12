@@ -112,6 +112,7 @@ cmd!(set_grip_pose, SetGripPose, arm_pos: f32, turn_pos: f32, claw_mode: u16);
 cmd!(set_grip_preset_pose, SetGripPresetPose, preset_id: u16);
 cmd!(store_kfs, StoreKFS);
 cmd!(release_kfs, ReleaseKFS);
+cmd!(step_pose, StepPose, step_type: u8, direction: u8, step_height: u8, param: u8, step_target_x: f32, step_target_y: f32, step_target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32);
 
 #[tauri::command]
 fn get_robot_state(state: State<'_, AppState>) -> Result<RobotState, String> {
@@ -166,6 +167,7 @@ pub fn run() {
             release_kfs,
             set_grip_pose,
             set_grip_preset_pose,
+            step_pose,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

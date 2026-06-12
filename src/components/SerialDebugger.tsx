@@ -80,18 +80,31 @@ const CMD_NAMES: Record<number, string> = {
   0x01: 'Ping',
   0x10: 'StopChassis',
   0x11: 'SetChassisHeight',
+  0x12: 'SlavePushChassisTrajectory',
   0x13: 'SetMasterChassisTargetCurrentState',
   0x14: 'SetMasterChassisTargetPreviousCurve',
   0x15: 'SetMasterChassisVelocity',
+  0x16: 'SetGripPose',
+  0x17: 'SetGripPresetPose',
   0x21: 'LidarPosture',
-  0x30: 'StepUp',
+  0x30: 'StepUp200',
   0x31: 'StepUpResume',
-  0x32: 'StepDown',
+  0x32: 'StepDown200',
+  0x33: 'StepUp400',
+  0x34: 'StepDown400',
   0x40: 'TakeSpear',
   0x41: 'TakeSpearById',
   0x42: 'StoreKFS',
   0x43: 'ReleaseKFS',
 };
+
+for (let cmd = 0x50; cmd <= 0x5F; cmd++) {
+  const type = (cmd >> 3) & 1 ? 'Down' : 'Up';
+  const dir = (cmd >> 2) & 1 ? 'Backward' : 'Forward';
+  const height = (cmd >> 1) & 1 ? '400' : '200';
+  const param = cmd & 1;
+  CMD_NAMES[cmd] = `StepPose(${type},${dir},${height},p=${param})`;
+}
 
 interface FieldSegment {
   label: string;

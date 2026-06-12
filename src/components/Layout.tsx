@@ -2,7 +2,7 @@ import { ConnectionPanel } from './ConnectionPanel';
 import { StatusDisplay } from './StatusDisplay';
 import { ActionStatePanel } from './ActionStatePanel';
 import { ConnectionMap } from './ConnectionMap';
-import { HeightControl, StepControl, GripControl, SystemControl, PostureControl } from './ControlPanel';
+import { HeightControl, StepControl, StepPoseControl, GripControl, SystemControl, PostureControl } from './ControlPanel';
 import { WasdVelocityControl } from './WasdVelocityControl';
 import { Tabs } from './Tabs';
 import { SerialDebugger } from './SerialDebugger';
@@ -32,7 +32,7 @@ export function Layout({ state }: LayoutProps) {
     {
       id: 'step',
       label: '台阶控制',
-      content: <StepControl />,
+      content: <div className="space-y-6"><StepControl /><StepPoseControl /></div>,
     },
     {
       id: 'grip',

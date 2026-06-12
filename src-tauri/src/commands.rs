@@ -20,6 +20,7 @@ pub enum Command {
     StepDown400 { start_distance: f32, end_distance: f32, direction: u16, should_reset: u16 },
     TakeSpear { target_x: f32, target_y: f32, target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32 },
     TakeSpearById { spear_id: u16, end_x: f32, end_y: f32, end_yaw: f32 },
+    StepPose { step_type: u8, direction: u8, step_height: u8, param: u8, step_target_x: f32, step_target_y: f32, step_target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32 },
     StoreKFS,
     ReleaseKFS,
 }
@@ -91,6 +92,7 @@ impl Command {
                 data[0..2].copy_from_slice(&scale_vx(*vx).to_be_bytes());
                 data[2..4].copy_from_slice(&scale_vy(*vy).to_be_bytes());
                 data[4..6].copy_from_slice(&scale_wz(*wz).to_be_bytes());
+                // reserve0, reserve1, reserve2 stay zero
                 let frame = CommandFrame {
                     cmd: 0x15,
                     data,
@@ -103,6 +105,7 @@ impl Command {
                 data[0..2].copy_from_slice(&scale_yaw(*arm_pos).to_be_bytes());
                 data[2..4].copy_from_slice(&scale_yaw(*turn_pos).to_be_bytes());
                 data[4..6].copy_from_slice(&claw_mode.to_be_bytes());
+                // reserve0, reserve1, reserve2 stay zero
                 let frame = CommandFrame {
                     cmd: 0x16,
                     data,
@@ -113,6 +116,7 @@ impl Command {
             Command::SetGripPresetPose { preset_id } => {
                 let mut data = [0u8; 12];
                 data[0..2].copy_from_slice(&preset_id.to_be_bytes());
+                // reserve0..reserve4 stay zero
                 let frame = CommandFrame {
                     cmd: 0x17,
                     data,
@@ -222,8 +226,25 @@ impl Command {
                 data[2..4].copy_from_slice(&scale_x(*end_x).to_be_bytes());
                 data[4..6].copy_from_slice(&scale_y(*end_y).to_be_bytes());
                 data[6..8].copy_from_slice(&scale_yaw(*end_yaw).to_be_bytes());
+                // reserve0, reserve1 stay zero
                 let frame = CommandFrame {
                     cmd: 0x41,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::StepPose { step_type, direction, step_height, param, step_target_x, step_target_y, step_target_yaw, end_x, end_y, end_yaw } => {
+                let cmd = 0x50 | (step_type << 3) | (direction << 2) | (step_height << 1) | param;
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&scale_x(*step_target_x).to_be_bytes());
+                data[2..4].copy_from_slice(&scale_y(*step_target_y).to_be_bytes());
+                data[4..6].copy_from_slice(&scale_yaw(*step_target_yaw).to_be_bytes());
+                data[6..8].copy_from_slice(&scale_x(*end_x).to_be_bytes());
+                data[8..10].copy_from_slice(&scale_y(*end_y).to_be_bytes());
+                data[10..12].copy_from_slice(&scale_yaw(*end_yaw).to_be_bytes());
+                let frame = CommandFrame {
+                    cmd,
                     data,
                     tx_timestamp: timestamp,
                 };

@@ -311,6 +311,131 @@ export function StepControl() {
   );
 }
 
+export function StepPoseControl() {
+  const { send } = useCommand();
+  const [stepType, setStepType] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const [stepHeight, setStepHeight] = useState(0);
+  const [param, setParam] = useState(0);
+  const [stepTargetX, setStepTargetX] = useState(0);
+  const [stepTargetY, setStepTargetY] = useState(0);
+  const [stepTargetYaw, setStepTargetYaw] = useState(0);
+  const [endX, setEndX] = useState(0);
+  const [endY, setEndY] = useState(0);
+  const [endYaw, setEndYaw] = useState(0);
+
+  const handleSend = async () => {
+    try {
+      await send({
+        type: 'StepPose',
+        step_type: stepType,
+        direction,
+        step_height: stepHeight,
+        param,
+        step_target_x: stepTargetX,
+        step_target_y: stepTargetY,
+        step_target_yaw: stepTargetYaw,
+        end_x: endX,
+        end_y: endY,
+        end_yaw: endYaw,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-md font-semibold text-text">世界系台阶 (StepPose 0x50-0x5F)</h3>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm text-text-secondary block mb-1">动作类型</label>
+          <RadioGroup
+            value={stepType}
+            onChange={setStepType}
+            options={[
+              { value: 0, label: '上台阶' },
+              { value: 1, label: '下台阶' },
+            ]}
+          />
+        </div>
+        <div>
+          <label className="text-sm text-text-secondary block mb-1">方向</label>
+          <RadioGroup
+            value={direction}
+            onChange={setDirection}
+            options={[
+              { value: 0, label: '前进' },
+              { value: 1, label: '后退' },
+            ]}
+          />
+        </div>
+        <div>
+          <label className="text-sm text-text-secondary block mb-1">台阶高度</label>
+          <RadioGroup
+            value={stepHeight}
+            onChange={setStepHeight}
+            options={[
+              { value: 0, label: '200mm' },
+              { value: 1, label: '400mm' },
+            ]}
+          />
+        </div>
+        <div>
+          <label className="text-sm text-text-secondary block mb-1">
+            {stepType === 0 ? '中途取卷轴' : '下台后恢复高度'}
+          </label>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={param !== 0}
+            onClick={() => setParam(param ? 0 : 1)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              param ? 'bg-primary' : 'bg-gray-500'
+            }`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                param ? 'translate-x-[1.125rem]' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+          <span className="text-xs text-text-secondary ml-2">
+            {stepType === 0 ? (param ? 'will_take=1' : 'will_take=0') : (param ? 'should_reset=1' : 'should_reset=0')}
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm text-text-secondary block mb-1">台阶作业点 (世界系)</label>
+        <div className="grid grid-cols-3 gap-2">
+          <NumField label="X (m)" step={0.01} value={stepTargetX} onChange={setStepTargetX} />
+          <NumField label="Y (m)" step={0.01} value={stepTargetY} onChange={setStepTargetY} />
+          <NumField label="Yaw (°)" step={0.1} value={stepTargetYaw} onChange={setStepTargetYaw} />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm text-text-secondary block mb-1">结束位置 (世界系)</label>
+        <div className="grid grid-cols-3 gap-2">
+          <NumField label="X (m)" step={0.01} value={endX} onChange={setEndX} />
+          <NumField label="Y (m)" step={0.01} value={endY} onChange={setEndY} />
+          <NumField label="Yaw (°)" step={0.1} value={endYaw} onChange={setEndYaw} />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleSend}
+        className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full"
+      >
+        发送 StepPose
+      </button>
+    </div>
+  );
+}
+
 type TakeSpearMode = 'byId' | 'byPos';
 
 export function GripControl() {

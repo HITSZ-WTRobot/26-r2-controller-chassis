@@ -67,4 +67,5 @@ export type Command =
   | { type: 'StoreKFS' }
   | { type: 'ReleaseKFS' }
   | { type: 'SetGripPose'; arm_pos: number; turn_pos: number; claw_mode: number }
-  | { type: 'SetGripPresetPose'; preset_id: number };
+  | { type: 'SetGripPresetPose'; preset_id: number }
+  | { type: 'StepPose'; step_type: number; direction: number; step_height: number; param: number; step_target_x: number; step_target_y: number; step_target_yaw: number; end_x: number; end_y: number; end_yaw: number };
