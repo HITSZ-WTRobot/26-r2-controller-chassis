@@ -25,6 +25,7 @@ pub enum Command {
     ReleaseKFS,
     SetGripSuction { on: u16 },
     SetAbdomenSuction { on: u16 },
+    SetGripClaw { claw_mode: u16 },
 }
 
 impl Command {
@@ -283,6 +284,16 @@ impl Command {
                 data[0..2].copy_from_slice(&on.to_be_bytes());
                 let frame = CommandFrame {
                     cmd: 0x45,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::SetGripClaw { claw_mode } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&claw_mode.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x46,
                     data,
                     tx_timestamp: timestamp,
                 };

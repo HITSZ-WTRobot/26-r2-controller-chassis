@@ -169,12 +169,12 @@ export function WasdVelocityControl() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-md font-semibold text-text">WASD 速度控制</h3>
+        <h3 className="text-sm font-semibold text-text">WASD 速度控制</h3>
         <button
           onClick={() => setEnabled(!enabled)}
-          className={`px-3 py-1 rounded text-sm text-white transition-colors ${
+          className={`px-2 py-0.5 rounded text-sm text-white transition-colors ${
             enabled ? 'bg-success' : 'bg-gray-500 hover:bg-gray-600'
           }`}
         >
@@ -182,7 +182,7 @@ export function WasdVelocityControl() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 max-w-[12rem] mx-auto">
+      <div className="grid grid-cols-3 gap-1.5 max-w-[12rem] mx-auto">
         <div />
         <KeyBadge keyName="W" label="前进" active={keyDisplay.w} />
         <div />
@@ -194,7 +194,7 @@ export function WasdVelocityControl() {
         <KeyBadge keyName="E" label="右转" active={keyDisplay.e} />
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         <SliderField
           label="平移 最大速度"
           unit="m/s"
@@ -254,7 +254,7 @@ function SliderField({ label, unit, value, onChange, min, max, step }: SliderFie
   const clamp = (v: number) => Math.min(max, Math.max(min, v));
   return (
     <div>
-      <div className="flex justify-between mb-1">
+      <div className="flex justify-between mb-0.5">
         <label className="text-sm text-text-secondary">
           {label} ({unit})
         </label>

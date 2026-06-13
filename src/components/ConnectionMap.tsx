@@ -24,13 +24,13 @@ const ITEMS: { label: string; key: keyof ConnectionState }[] = [
 
 export function ConnectionMap({ connectionState }: ConnectionMapProps) {
   return (
-    <div className="bg-surface rounded-lg shadow p-4 border border-border">
-      <h2 className="text-lg font-semibold mb-4 text-text">连接状态图</h2>
-      <div className="grid grid-cols-2 gap-2">
+    <div className="bg-surface rounded-lg shadow p-3 border border-border">
+      <h2 className="text-base font-semibold mb-3 text-text">连接状态图</h2>
+      <div className="grid grid-cols-2 gap-1.5">
         {ITEMS.map((item) => {
           const online = connectionState ? connectionState[item.key] : null;
           return (
-            <div key={item.key} className="flex items-center gap-2">
+            <div key={item.key} className="flex items-center gap-1.5">
               {online === null ? (
                 <div className="w-3 h-3 rounded-full bg-border animate-pulse" />
               ) : (

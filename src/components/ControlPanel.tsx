@@ -101,10 +101,10 @@ export function HeightControl({ state }: HeightControlProps) {
   const pct = ((height - HEIGHT_MIN) / (HEIGHT_MAX - HEIGHT_MIN)) * 100;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-md font-semibold text-text">底盘高度控制</h3>
-        <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none">
+        <h3 className="text-sm font-semibold text-text">底盘高度控制</h3>
+        <label className="flex items-center gap-1.5 text-sm text-text-secondary cursor-pointer select-none">
           <span>即时发送</span>
           <button
             type="button"
@@ -123,8 +123,8 @@ export function HeightControl({ state }: HeightControlProps) {
           </button>
         </label>
       </div>
-      <div className="flex gap-4 items-stretch">
-        <div className="flex flex-col items-center gap-2 shrink-0 py-1">
+      <div className="flex gap-3 items-stretch">
+        <div className="flex flex-col items-center gap-1.5 shrink-0 py-0.5">
           <span className="text-xs text-text-secondary font-mono">{HEIGHT_MAX.toFixed(3)}</span>
           <VerticalSlider
             value={height}
@@ -137,12 +137,12 @@ export function HeightControl({ state }: HeightControlProps) {
           <span className="text-xs text-text-secondary font-mono">{HEIGHT_MIN.toFixed(3)}</span>
         </div>
 
-        <div className="flex-1 space-y-3">
+        <div className="flex-1 space-y-2">
           <div>
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-0.5">
               <label className="text-sm text-text-secondary">
                 当前高度 <span className="font-mono text-text">{height.toFixed(3)} m</span>
-                <span className="ml-2 text-text-secondary">({pct.toFixed(0)}%)</span>
+                <span className="ml-1.5 text-text-secondary">({pct.toFixed(0)}%)</span>
               </label>
               <button
                 type="button"
@@ -185,7 +185,7 @@ export function HeightControl({ state }: HeightControlProps) {
             <button
               type="button"
               onClick={handleManualSend}
-              className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full text-sm"
+              className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full text-sm"
             >
               发送
             </button>
@@ -223,13 +223,13 @@ export function StepControl() {
   };
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-md font-semibold text-text">台阶控制</h3>
-      <div className="space-y-3">
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-text">台阶控制</h3>
+      <div className="space-y-2">
         <InputRow label="起始距离 (m)" value={startDist} onChange={setStartDist} step={0.01} />
         <InputRow label="结束距离 (m)" value={endDist} onChange={setEndDist} step={0.01} />
         <div>
-          <label className="text-sm text-text-secondary block mb-1">方向</label>
+          <label className="text-sm text-text-secondary block mb-0.5">方向</label>
           <RadioGroup
             value={direction}
             onChange={setDirection}
@@ -240,7 +240,7 @@ export function StepControl() {
           />
         </div>
         <div>
-          <label className="text-sm text-text-secondary block mb-1">台阶高度</label>
+          <label className="text-sm text-text-secondary block mb-0.5">台阶高度</label>
           <RadioGroup
             value={stepHeight}
             onChange={setStepHeight}
@@ -250,7 +250,7 @@ export function StepControl() {
             ]}
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none">
+        <label className="flex items-center gap-1.5 text-sm text-text-secondary cursor-pointer select-none">
           <span>中途取卷轴 (will_take)</span>
           <button
             type="button"
@@ -268,7 +268,7 @@ export function StepControl() {
             />
           </button>
         </label>
-        <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none">
+        <label className="flex items-center gap-1.5 text-sm text-text-secondary cursor-pointer select-none">
           <span>下台阶后恢复高度 (should_reset)</span>
           <button
             type="button"
@@ -287,22 +287,22 @@ export function StepControl() {
           </button>
         </label>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1.5">
         <button
           onClick={handleStepUp}
-          className="bg-primary text-white px-3 py-2 rounded hover:bg-primary-hover text-sm"
+          className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover text-sm"
         >
           登上
         </button>
         <button
           onClick={handleStepDown}
-          className="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 text-sm"
+          className="bg-gray-500 text-white px-3 py-1.5 rounded hover:bg-gray-600 text-sm"
         >
           走下
         </button>
         <button
           onClick={handleStepUpResume}
-          className="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 text-sm"
+          className="bg-gray-500 text-white px-3 py-1.5 rounded hover:bg-gray-600 text-sm"
         >
           继续登
         </button>
@@ -345,12 +345,12 @@ export function StepPoseControl() {
   };
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-md font-semibold text-text">世界系台阶 (StepPose 0x50-0x5F)</h3>
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-text">世界系台阶 (StepPose 0x50-0x5F)</h3>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-sm text-text-secondary block mb-1">动作类型</label>
+          <label className="text-sm text-text-secondary block mb-0.5">动作类型</label>
           <RadioGroup
             value={stepType}
             onChange={setStepType}
@@ -361,7 +361,7 @@ export function StepPoseControl() {
           />
         </div>
         <div>
-          <label className="text-sm text-text-secondary block mb-1">方向</label>
+          <label className="text-sm text-text-secondary block mb-0.5">方向</label>
           <RadioGroup
             value={direction}
             onChange={setDirection}
@@ -372,7 +372,7 @@ export function StepPoseControl() {
           />
         </div>
         <div>
-          <label className="text-sm text-text-secondary block mb-1">台阶高度</label>
+          <label className="text-sm text-text-secondary block mb-0.5">台阶高度</label>
           <RadioGroup
             value={stepHeight}
             onChange={setStepHeight}
@@ -383,7 +383,7 @@ export function StepPoseControl() {
           />
         </div>
         <div>
-          <label className="text-sm text-text-secondary block mb-1">
+          <label className="text-sm text-text-secondary block mb-0.5">
             {stepType === 0 ? '中途取卷轴' : '下台后恢复高度'}
           </label>
           <button
@@ -401,15 +401,15 @@ export function StepPoseControl() {
               }`}
             />
           </button>
-          <span className="text-xs text-text-secondary ml-2">
+          <span className="text-xs text-text-secondary ml-1.5">
             {stepType === 0 ? (param ? 'will_take=1' : 'will_take=0') : (param ? 'should_reset=1' : 'should_reset=0')}
           </span>
         </div>
       </div>
 
       <div>
-        <label className="text-sm text-text-secondary block mb-1">台阶作业点 (世界系)</label>
-        <div className="grid grid-cols-3 gap-2">
+        <label className="text-sm text-text-secondary block mb-0.5">台阶作业点 (世界系)</label>
+        <div className="grid grid-cols-3 gap-1.5">
           <NumField label="X (m)" step={0.01} value={stepTargetX} onChange={setStepTargetX} />
           <NumField label="Y (m)" step={0.01} value={stepTargetY} onChange={setStepTargetY} />
           <NumField label="Yaw (°)" step={0.1} value={stepTargetYaw} onChange={setStepTargetYaw} />
@@ -417,8 +417,8 @@ export function StepPoseControl() {
       </div>
 
       <div>
-        <label className="text-sm text-text-secondary block mb-1">结束位置 (世界系)</label>
-        <div className="grid grid-cols-3 gap-2">
+        <label className="text-sm text-text-secondary block mb-0.5">结束位置 (世界系)</label>
+        <div className="grid grid-cols-3 gap-1.5">
           <NumField label="X (m)" step={0.01} value={endX} onChange={setEndX} />
           <NumField label="Y (m)" step={0.01} value={endY} onChange={setEndY} />
           <NumField label="Yaw (°)" step={0.1} value={endYaw} onChange={setEndYaw} />
@@ -428,7 +428,7 @@ export function StepPoseControl() {
       <button
         type="button"
         onClick={handleSend}
-        className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full"
+        className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full"
       >
         发送 StepPose
       </button>
@@ -481,152 +481,180 @@ export function GripControl() {
   };
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-md font-semibold text-text">夹爪控制</h3>
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-text">夹爪控制</h3>
 
-      <div>
-        <label className="text-sm text-text-secondary block mb-1">取矛协议</label>
-        <RadioGroup
-          value={mode}
-          onChange={(v) => setMode(v)}
-          options={[
-            { value: 'byId', label: '按编号 (0x41)' },
-            { value: 'byPos', label: '按坐标 (0x40)' },
-          ]}
-        />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* 左列：取矛操作 */}
+        <div className="space-y-3">
+          <div>
+            <label className="text-sm text-text-secondary block mb-0.5">取矛协议</label>
+            <RadioGroup
+              value={mode}
+              onChange={(v) => setMode(v)}
+              options={[
+                { value: 'byId', label: '按编号 (0x41)' },
+                { value: 'byPos', label: '按坐标 (0x40)' },
+              ]}
+            />
+          </div>
 
-      {mode === 'byId' ? (
-        <div>
-          <label className="text-sm text-text-secondary block mb-1">矛编号</label>
-          <RadioGroup
-            value={spearId}
-            onChange={setSpearId}
-            options={[0, 1, 2, 3, 4, 5].map((id) => ({ value: id, label: String(id) }))}
-          />
-        </div>
-      ) : (
-        <div>
-          <label className="text-sm text-text-secondary block mb-1">目标位姿</label>
-          <div className="grid grid-cols-3 gap-2">
-            <NumField label="X (m)" step={0.01} value={targetX} onChange={setTargetX} />
-            <NumField label="Y (m)" step={0.01} value={targetY} onChange={setTargetY} />
-            <NumField label="Yaw (°)" step={0.1} value={targetYaw} onChange={setTargetYaw} />
+          {mode === 'byId' ? (
+            <div>
+              <label className="text-sm text-text-secondary block mb-0.5">矛编号</label>
+              <RadioGroup
+                value={spearId}
+                onChange={setSpearId}
+                options={[0, 1, 2, 3, 4, 5].map((id) => ({ value: id, label: String(id) }))}
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="text-sm text-text-secondary block mb-0.5">目标位姿</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                <NumField label="X (m)" step={0.01} value={targetX} onChange={setTargetX} />
+                <NumField label="Y (m)" step={0.01} value={targetY} onChange={setTargetY} />
+                <NumField label="Yaw (°)" step={0.1} value={targetYaw} onChange={setTargetYaw} />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="text-sm text-text-secondary block mb-0.5">终点位姿</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              <NumField label="X (m)" step={0.01} value={endX} onChange={setEndX} />
+              <NumField label="Y (m)" step={0.01} value={endY} onChange={setEndY} />
+              <NumField label="Yaw (°)" step={0.1} value={endYaw} onChange={setEndYaw} />
+            </div>
+          </div>
+
+          <button
+            onClick={handleTake}
+            className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full"
+          >
+            取矛
+          </button>
+
+          <div className="border-t border-border pt-2 grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => send({ type: 'StoreKFS' })}
+              className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover"
+            >
+              存储 KFS
+            </button>
+            <button
+              onClick={() => send({ type: 'ReleaseKFS' })}
+              className="bg-gray-500 text-white px-3 py-1.5 rounded hover:bg-gray-600"
+            >
+              释放 KFS
+            </button>
           </div>
         </div>
-      )}
 
-      <div>
-        <label className="text-sm text-text-secondary block mb-1">终点位姿</label>
-        <div className="grid grid-cols-3 gap-2">
-          <NumField label="X (m)" step={0.01} value={endX} onChange={setEndX} />
-          <NumField label="Y (m)" step={0.01} value={endY} onChange={setEndY} />
-          <NumField label="Yaw (°)" step={0.1} value={endYaw} onChange={setEndYaw} />
-        </div>
-      </div>
-
-      <button
-        onClick={handleTake}
-        className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full"
-      >
-        取矛
-      </button>
-
-      <div className="border-t border-border pt-3 grid grid-cols-2 gap-2">
-        <button
-          onClick={() => send({ type: 'StoreKFS' })}
-          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover"
-        >
-          存储 KFS
-        </button>
-        <button
-          onClick={() => send({ type: 'ReleaseKFS' })}
-          className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-        >
-          释放 KFS
-        </button>
-      </div>
-
-      {/* SetGripSuction (0x44) */}
-      <div className="border-t border-border pt-3 space-y-2">
-        <h4 className="text-sm font-semibold text-text">Grip 吸盘 (0x44)</h4>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => send({ type: 'SetGripSuction', on: 1 })}
-            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover"
-          >
-            启动
-          </button>
-          <button
-            onClick={() => send({ type: 'SetGripSuction', on: 0 })}
-            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-          >
-            关闭
-          </button>
-        </div>
-      </div>
-
-      {/* SetGripPose (0x16) */}
-      <div className="border-t border-border pt-3 space-y-3">
-        <h4 className="text-sm font-semibold text-text">Grip 关节姿态 (0x16)</h4>
-        <InputRow label="大臂角 arm_pos (°)" value={armPos} onChange={setArmPos} step={0.1} />
-        <InputRow label="转向角 turn_pos (°)" value={turnPos} onChange={setTurnPos} step={0.1} />
-        <div>
-          <label className="text-sm text-text-secondary block mb-1">夹爪模式</label>
-          <RadioGroup
-            value={clawMode}
-            onChange={setClawMode}
-            options={[
-              { value: 0, label: '保持' },
-              { value: 1, label: '张开' },
-              { value: 2, label: '闭合' },
-            ]}
-          />
-        </div>
-        <button
-          onClick={() => send({ type: 'SetGripPose', arm_pos: armPos, turn_pos: turnPos, claw_mode: clawMode })}
-          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full"
-        >
-          发送关节姿态
-        </button>
-      </div>
-
-      {/* SetGripPresetPose (0x17) */}
-      <div className="border-t border-border pt-3 space-y-3">
-        <h4 className="text-sm font-semibold text-text">Grip 预设姿态 (0x17)</h4>
-        <div>
-          <label className="text-sm text-text-secondary block mb-1">预设</label>
-          <div className="flex flex-wrap gap-1">
-            {[
-              { id: 0, label: 'Standby' },
-              { id: 1, label: 'PrepareGrab' },
-              { id: 2, label: 'Grab' },
-              { id: 3, label: 'Docking' },
-              { id: 4, label: 'KfsPickup' },
-              { id: 5, label: 'KfsStore' },
-              { id: 6, label: 'KfsRelease' },
-            ].map((p) => (
+        {/* 右列：夹爪执行器 */}
+        <div className="space-y-3">
+          {/* SetGripSuction (0x44) */}
+          <div className="space-y-1.5">
+            <h4 className="text-sm font-semibold text-text">Grip 吸盘 (0x44)</h4>
+            <div className="grid grid-cols-2 gap-1.5">
               <button
-                key={p.id}
-                type="button"
-                onClick={() => setPresetId(p.id)}
-                className={`px-2 py-1 text-xs rounded border transition-colors ${
-                  presetId === p.id
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-surface text-text border-border hover:bg-bg'
-                }`}
+                onClick={() => send({ type: 'SetGripSuction', on: 1 })}
+                className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover"
               >
-                {p.label}
+                启动
               </button>
-            ))}
+              <button
+                onClick={() => send({ type: 'SetGripSuction', on: 0 })}
+                className="bg-gray-500 text-white px-3 py-1.5 rounded hover:bg-gray-600"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+
+          {/* SetGripClaw (0x46) - 独立夹爪 */}
+          <div className="space-y-1.5">
+            <h4 className="text-sm font-semibold text-text">独立夹爪 (0x46)</h4>
+            <p className="text-xs text-text-secondary">仅控制夹爪 GPIO，不影响 arm/turn 关节</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                onClick={() => send({ type: 'SetGripClaw', claw_mode: 0 })}
+                className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover"
+              >
+                张开
+              </button>
+              <button
+                onClick={() => send({ type: 'SetGripClaw', claw_mode: 1 })}
+                className="bg-gray-500 text-white px-3 py-1.5 rounded hover:bg-gray-600"
+              >
+                闭合
+              </button>
+            </div>
+          </div>
+
+          {/* SetGripPose (0x16) */}
+          <div className="border-t border-border pt-2 space-y-2">
+            <h4 className="text-sm font-semibold text-text">Grip 关节姿态 (0x16)</h4>
+            <InputRow label="大臂角 arm_pos (°)" value={armPos} onChange={setArmPos} step={0.1} />
+            <InputRow label="转向角 turn_pos (°)" value={turnPos} onChange={setTurnPos} step={0.1} />
+            <div>
+              <label className="text-sm text-text-secondary block mb-0.5">夹爪模式</label>
+              <RadioGroup
+                value={clawMode}
+                onChange={setClawMode}
+                options={[
+                  { value: 0, label: '保持' },
+                  { value: 1, label: '张开' },
+                  { value: 2, label: '闭合' },
+                ]}
+              />
+            </div>
+            <button
+              onClick={() => send({ type: 'SetGripPose', arm_pos: armPos, turn_pos: turnPos, claw_mode: clawMode })}
+              className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full"
+            >
+              发送关节姿态
+            </button>
+          </div>
+
+          {/* SetGripPresetPose (0x17) */}
+          <div className="border-t border-border pt-2 space-y-2">
+            <h4 className="text-sm font-semibold text-text">Grip 预设姿态 (0x17)</h4>
+            <div>
+              <label className="text-sm text-text-secondary block mb-0.5">预设</label>
+              <div className="flex flex-wrap gap-0.5">
+                {[
+                  { id: 0, label: 'Standby' },
+                  { id: 1, label: 'PrepareGrab' },
+                  { id: 2, label: 'Grab' },
+                  { id: 3, label: 'Docking' },
+                  { id: 4, label: 'KfsPickup' },
+                  { id: 5, label: 'KfsStore' },
+                  { id: 6, label: 'KfsRelease' },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPresetId(p.id)}
+                    className={`px-1.5 py-0.5 text-xs rounded border transition-colors ${
+                      presetId === p.id
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-surface text-text border-border hover:bg-bg'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => send({ type: 'SetGripPresetPose', preset_id: presetId })}
+              className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full"
+            >
+              发送预设 ({presetId})
+            </button>
           </div>
         </div>
-        <button
-          onClick={() => send({ type: 'SetGripPresetPose', preset_id: presetId })}
-          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full"
-        >
-          发送预设 ({presetId})
-        </button>
       </div>
     </div>
   );
@@ -636,36 +664,36 @@ export function SystemControl() {
   const { send } = useCommand();
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-md font-semibold text-text">系统控制</h3>
-      <div className="grid grid-cols-2 gap-2">
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-text">系统控制</h3>
+      <div className="grid grid-cols-2 gap-1.5">
         <button
           onClick={() => send({ type: 'Ping' })}
-          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover"
+          className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover"
         >
           Ping
         </button>
         <button
           onClick={() => send({ type: 'StopChassis' })}
-          className="bg-danger text-white px-4 py-2 rounded hover:opacity-90"
+          className="bg-danger text-white px-3 py-1.5 rounded hover:opacity-90"
         >
           紧急停止
         </button>
       </div>
 
       {/* SetAbdomenSuction (0x45) */}
-      <div className="border-t border-border pt-3 space-y-2">
+      <div className="border-t border-border pt-2 space-y-1.5">
         <h4 className="text-sm font-semibold text-text">腹部吸盘 (0x45)</h4>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-1.5">
           <button
             onClick={() => send({ type: 'SetAbdomenSuction', on: 1 })}
-            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover"
+            className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover"
           >
             启动
           </button>
           <button
             onClick={() => send({ type: 'SetAbdomenSuction', on: 0 })}
-            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+            className="bg-gray-500 text-white px-3 py-1.5 rounded hover:bg-gray-600"
           >
             关闭
           </button>
@@ -720,11 +748,11 @@ export function PostureControl({ state }: PostureControlProps) {
   };
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-md font-semibold text-text">位姿控制 (SetMasterChassisTargetCurrentState)</h3>
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-text">位姿控制 (SetMasterChassisTargetCurrentState)</h3>
 
       <div>
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-0.5">
           <label className="text-sm text-text-secondary">目标位姿</label>
           <button
             type="button"
@@ -735,7 +763,7 @@ export function PostureControl({ state }: PostureControlProps) {
             使用当前位置
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           <NumField label="X (m)" step={0.01} value={x} onChange={setX} />
           <NumField label="Y (m)" step={0.01} value={y} onChange={setY} />
           <NumField label="Yaw (°)" step={0.1} value={yaw} onChange={setYaw} />
@@ -743,8 +771,8 @@ export function PostureControl({ state }: PostureControlProps) {
       </div>
 
       <div>
-        <label className="text-sm text-text-secondary block mb-1">运动参数</label>
-        <div className="grid grid-cols-2 gap-3">
+        <label className="text-sm text-text-secondary block mb-0.5">运动参数</label>
+        <div className="grid grid-cols-2 gap-2">
           <SliderRow
             label="XY 最大速度"
             unit="m/s"
@@ -787,7 +815,7 @@ export function PostureControl({ state }: PostureControlProps) {
       <button
         type="button"
         onClick={handleSend}
-        className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover w-full"
+        className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full"
       >
         发送位姿指令
       </button>
@@ -804,7 +832,7 @@ interface InputRowProps {
 
 function InputRow({ label, value, onChange, step }: InputRowProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       <label className="flex-1 text-sm text-text-secondary">{label}</label>
       <input
         type="number"
@@ -827,7 +855,7 @@ interface NumFieldProps {
 function NumField({ label, value, onChange, step }: NumFieldProps) {
   return (
     <div>
-      <label className="text-xs text-text-secondary block mb-1">{label}</label>
+      <label className="text-xs text-text-secondary block mb-0.5">{label}</label>
       <input
         type="number"
         step={step}
@@ -853,7 +881,7 @@ function SliderRow({ label, unit, value, onChange, min, max, step }: SliderRowPr
   const clamp = (v: number) => Math.min(max, Math.max(min, v));
   return (
     <div>
-      <div className="flex justify-between mb-1">
+      <div className="flex justify-between mb-0.5">
         <label className="text-sm text-text-secondary">
           {label} ({unit})
         </label>
@@ -894,7 +922,7 @@ function RadioGroup<T extends string | number>({ value, onChange, options }: Rad
           key={String(opt.value)}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={`px-3 py-1 text-sm transition-colors border-r border-border last:border-r-0 ${
+          className={`px-2 py-0.5 text-sm transition-colors border-r border-border last:border-r-0 ${
             value === opt.value
               ? 'bg-primary text-white'
               : 'bg-surface text-text hover:bg-bg'

@@ -41,11 +41,11 @@ const ROWS: Row[] = [
 
 export function ActionStatePanel({ actionState }: ActionStatePanelProps) {
   return (
-    <div className="bg-surface rounded-lg shadow p-4 border border-border">
-      <h2 className="text-lg font-semibold mb-4 text-text">动作状态</h2>
-      <div className="space-y-2">
+    <div className="bg-surface rounded-lg shadow p-3 border border-border">
+      <h2 className="text-base font-semibold mb-3 text-text">动作状态</h2>
+      <div className="space-y-1.5">
         {ROWS.map((row) => (
-          <div key={row.label} className="flex justify-between items-center py-1 border-b border-border last:border-0">
+          <div key={row.label} className="flex justify-between items-center py-0.5 border-b border-border last:border-0">
             <span className="text-text-secondary">{row.label}</span>
             {actionState ? (
               <span className={`font-mono ${row.highlight?.(actionState) ?? 'text-text'}`}>

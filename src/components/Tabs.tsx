@@ -21,7 +21,7 @@ export function Tabs({ tabs, defaultTab }: TabsProps) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ${
               activeTab === tab.id
                 ? 'text-primary border-b-2 border-primary -mb-px'
                 : 'text-text-secondary hover:text-text'
@@ -31,7 +31,7 @@ export function Tabs({ tabs, defaultTab }: TabsProps) {
           </button>
         ))}
       </div>
-      <div className="p-4">
+      <div className="p-3">
         {tabs.map((tab) => (
           <div key={tab.id} className={activeTab === tab.id ? '' : 'hidden'}>
             {tab.content}

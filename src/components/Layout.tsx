@@ -18,7 +18,7 @@ export function Layout({ state }: LayoutProps) {
       id: 'chassis',
       label: '底盘控制',
       content: (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <WasdVelocityControl />
           <HeightControl state={state} />
         </div>
@@ -32,7 +32,7 @@ export function Layout({ state }: LayoutProps) {
     {
       id: 'step',
       label: '台阶控制',
-      content: <div className="space-y-6"><StepControl /><StepPoseControl /></div>,
+      content: <div className="grid grid-cols-1 lg:grid-cols-2 gap-3"><StepControl /><StepPoseControl /></div>,
     },
     {
       id: 'grip',
@@ -47,15 +47,15 @@ export function Layout({ state }: LayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-bg p-3 sm:p-4">
-      <div className="mx-auto max-w-[1600px] flex flex-col xl:flex-row gap-4">
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
+    <div className="min-h-screen bg-bg p-2 sm:p-3">
+      <div className="mx-auto max-w-[1600px] flex flex-col xl:flex-row gap-3">
+        <div className="flex-1 min-w-0 flex flex-col gap-3">
           <header>
             <h1 className="text-xl sm:text-2xl font-bold text-text">R2 控制端</h1>
             <p className="text-sm text-text-secondary">Robocon 2026 独立升降麦轮底盘</p>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-start">
             <ConnectionPanel />
             <StatusDisplay state={state} />
             <ActionStatePanel actionState={state?.action_state ?? null} />
