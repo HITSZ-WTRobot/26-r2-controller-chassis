@@ -16,6 +16,8 @@ const ITEMS: { label: string; key: keyof ConnectionState }[] = [
   { label: '夹爪臂', key: 'grip_arm' },
   { label: '夹爪转', key: 'grip_turn' },
   { label: '陀螺仪', key: 'gyro_yaw' },
+  { label: '夹爪吸盘压力', key: 'grip_suction_pressure' },
+  { label: '腹部吸盘压力', key: 'abdomen_suction_pressure' },
   { label: '定位', key: 'upper_host_localization' },
   { label: '上位机', key: 'upper_host' },
 ];

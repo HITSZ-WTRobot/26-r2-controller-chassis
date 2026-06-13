@@ -79,6 +79,8 @@ pub struct ConnectionState {
     pub grip_arm: bool,
     pub grip_turn: bool,
     pub gyro_yaw: bool,
+    pub grip_suction_pressure: bool,
+    pub abdomen_suction_pressure: bool,
     pub upper_host_localization: bool,
     pub upper_host: bool,
 }
@@ -139,6 +141,8 @@ impl Default for ConnectionState {
             grip_arm: false,
             grip_turn: false,
             gyro_yaw: false,
+            grip_suction_pressure: false,
+            abdomen_suction_pressure: false,
             upper_host_localization: false,
             upper_host: false,
         }
@@ -212,6 +216,8 @@ impl ConnectionState {
             grip_arm: (table & 0x0100) != 0,
             grip_turn: (table & 0x0200) != 0,
             gyro_yaw: (table & 0x0400) != 0,
+            grip_suction_pressure: (table & 0x0800) != 0,
+            abdomen_suction_pressure: (table & 0x1000) != 0,
             upper_host_localization: (table & 0x4000) != 0,
             upper_host: (table & 0x8000) != 0,
         }

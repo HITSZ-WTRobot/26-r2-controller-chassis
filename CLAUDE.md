@@ -96,13 +96,18 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 | `0x16` | SetGripPose | arm_pos(deg*100), turn_pos(deg*100), clawMode(0=keep,1=open,2=close), reserve×3 |
 | `0x17` | SetGripPresetPose | presetId(0-6), reserve×5 |
 | `0x21` | LidarPosture | x, y, yaw, lidar_timestamp |
-| `0x30` | StepUp | startDist, endDist, direction, willTake |
+| `0x30` | StepUp200 | startDist, endDist, direction, willTake |
 | `0x31` | StepUpResume | - |
-| `0x32` | StepDown | startDist, endDist, direction, shouldReset |
+| `0x32` | StepDown200 | startDist, endDist, direction, shouldReset |
+| `0x33` | StepUp400 | startDist, endDist, direction, willTake |
+| `0x34` | StepDown400 | startDist, endDist, direction, shouldReset |
 | `0x40` | TakeSpear | target(x,y,yaw), end(x,y,yaw) |
 | `0x41` | TakeSpearById | spearId(0-5), end(x,y,yaw), reserve×2 |
 | `0x42` | StoreKFS | - |
 | `0x43` | ReleaseKFS | - |
+| `0x44` | SetGripSuction | on(uint16), reserve×5 |
+| `0x45` | SetAbdomenSuction | on(uint16), reserve×5 |
+| `0x50..0x5F` | StepPose | stepTarget(x,y,yaw), end(x,y,yaw), cmd低4位编码type/dir/height/param |
 
 ### SetGripPresetPose Presets
 
@@ -122,8 +127,8 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 - `x, y`: int16 / 2000 → meters
 - `yaw`: int16 / 100 → degrees
 - `frontHeight, rearHeight`: int16 / 2000 → meters
-- `action_state`: bitfield (StepStatus bit0-1, ChassisMode bit2-3, ChassisCurveFinished bit4, LiftStatus bit5-6, GripStatus bit7-9, GripSuctionHasObject bit10)
-- `connection_state`: bitfield (wheel0-3, lift0-3, grip_arm, grip_turn, gyro_yaw, bit11-13 reserved, bit14=localization stream, bit15=upper_host link)
+- `action_state`: bitfield (StepStatus bit0-1, ChassisMode bit2-3, ChassisCurveFinished bit4, LiftStatus bit5-6, GripStatus bit7-9, GripSuctionHasObject bit10, InfraredReceiverState bit11-12)
+- `connection_state`: bitfield (wheel0-3, lift0-3, grip_arm, grip_turn, gyro_yaw, bit11=grip_suction_pressure, bit12=abdomen_suction_pressure(reserved), bit13 reserved, bit14=localization stream, bit15=upper_host link)
 
 ### GripStatus Values (bit7-9)
 

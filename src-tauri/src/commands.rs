@@ -23,6 +23,8 @@ pub enum Command {
     StepPose { step_type: u8, direction: u8, step_height: u8, param: u8, step_target_x: f32, step_target_y: f32, step_target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32 },
     StoreKFS,
     ReleaseKFS,
+    SetGripSuction { on: u16 },
+    SetAbdomenSuction { on: u16 },
 }
 
 impl Command {
@@ -262,6 +264,26 @@ impl Command {
                 let frame = CommandFrame {
                     cmd: 0x43,
                     data: [0; 12],
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::SetGripSuction { on } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&on.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x44,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::SetAbdomenSuction { on } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&on.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x45,
+                    data,
                     tx_timestamp: timestamp,
                 };
                 frame.encode()

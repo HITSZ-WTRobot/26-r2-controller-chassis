@@ -547,6 +547,25 @@ export function GripControl() {
         </button>
       </div>
 
+      {/* SetGripSuction (0x44) */}
+      <div className="border-t border-border pt-3 space-y-2">
+        <h4 className="text-sm font-semibold text-text">Grip 吸盘 (0x44)</h4>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => send({ type: 'SetGripSuction', on: 1 })}
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover"
+          >
+            启动
+          </button>
+          <button
+            onClick={() => send({ type: 'SetGripSuction', on: 0 })}
+            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+
       {/* SetGripPose (0x16) */}
       <div className="border-t border-border pt-3 space-y-3">
         <h4 className="text-sm font-semibold text-text">Grip 关节姿态 (0x16)</h4>
@@ -632,6 +651,25 @@ export function SystemControl() {
         >
           紧急停止
         </button>
+      </div>
+
+      {/* SetAbdomenSuction (0x45) */}
+      <div className="border-t border-border pt-3 space-y-2">
+        <h4 className="text-sm font-semibold text-text">腹部吸盘 (0x45)</h4>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => send({ type: 'SetAbdomenSuction', on: 1 })}
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-hover"
+          >
+            启动
+          </button>
+          <button
+            onClick={() => send({ type: 'SetAbdomenSuction', on: 0 })}
+            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+          >
+            关闭
+          </button>
+        </div>
       </div>
     </div>
   );
