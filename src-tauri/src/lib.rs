@@ -101,11 +101,12 @@ cmd!(set_chassis_height, SetChassisHeight, height: f32, v_max: f32, a_max: f32, 
 cmd!(set_master_chassis_target_current_state, SetMasterChassisTargetCurrentState, x: f32, y: f32, yaw: f32, xy_vmax: f32, xy_amax: f32, yaw_vmax: f32, yaw_amax: f32);
 cmd!(set_master_chassis_velocity, SetMasterChassisVelocity, vx: f32, vy: f32, wz: f32);
 cmd!(send_lidar_posture, LidarPosture, x: f32, y: f32, yaw: f32, lidar_timestamp: u32);
-cmd!(step_up200, StepUp200, start_distance: f32, end_distance: f32, direction: u16, will_take: u16);
+cmd!(step_up200, StepUp200, start_distance: f32, end_distance: f32, direction: u16, end_height: u16);
 cmd!(step_up_resume, StepUpResume);
-cmd!(step_down200, StepDown200, start_distance: f32, end_distance: f32, direction: u16, should_reset: u16);
-cmd!(step_up400, StepUp400, start_distance: f32, end_distance: f32, direction: u16, will_take: u16);
-cmd!(step_down400, StepDown400, start_distance: f32, end_distance: f32, direction: u16, should_reset: u16);
+cmd!(step_down200, StepDown200, start_distance: f32, end_distance: f32, direction: u16, end_height: u16);
+cmd!(step_up400, StepUp400, start_distance: f32, end_distance: f32, direction: u16, end_height: u16);
+cmd!(step_down400, StepDown400, start_distance: f32, end_distance: f32, direction: u16, end_height: u16);
+cmd!(step_up_r1, StepUpR1, step_target_x: f32, step_target_y: f32, step_target_yaw: f32, direction: u16);
 cmd!(take_spear, TakeSpear, target_x: f32, target_y: f32, target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32);
 cmd!(take_spear_by_id, TakeSpearById, spear_id: u16, end_x: f32, end_y: f32, end_yaw: f32);
 cmd!(set_grip_pose, SetGripPose, arm_pos: f32, turn_pos: f32, claw_mode: u16);
@@ -115,7 +116,7 @@ cmd!(release_kfs, ReleaseKFS);
 cmd!(set_grip_suction, SetGripSuction, on: u16);
 cmd!(set_abdomen_suction, SetAbdomenSuction, on: u16);
 cmd!(set_grip_claw, SetGripClaw, claw_mode: u16);
-cmd!(step_pose, StepPose, step_type: u8, direction: u8, step_height: u8, param: u8, step_target_x: f32, step_target_y: f32, step_target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32);
+cmd!(step_pose, StepPose, step_type: u8, direction: u8, step_height: u8, final_height: u8, step_target_x: f32, step_target_y: f32, step_target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32);
 
 #[tauri::command]
 fn get_robot_state(state: State<'_, AppState>) -> Result<RobotState, String> {
@@ -164,6 +165,7 @@ pub fn run() {
             step_down200,
             step_up400,
             step_down400,
+            step_up_r1,
             take_spear,
             take_spear_by_id,
             store_kfs,

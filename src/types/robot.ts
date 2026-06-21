@@ -59,11 +59,12 @@ export type Command =
   | { type: 'SetMasterChassisTargetCurrentState'; x: number; y: number; yaw: number; xy_vmax: number; xy_amax: number; yaw_vmax: number; yaw_amax: number }
   | { type: 'SetMasterChassisVelocity'; vx: number; vy: number; wz: number }
   | { type: 'LidarPosture'; x: number; y: number; yaw: number; lidar_timestamp: number }
-  | { type: 'StepUp200'; start_distance: number; end_distance: number; direction: number; will_take: number }
+  | { type: 'StepUp200'; start_distance: number; end_distance: number; direction: number; end_height: number }
   | { type: 'StepUpResume' }
-  | { type: 'StepDown200'; start_distance: number; end_distance: number; direction: number; should_reset: number }
-  | { type: 'StepUp400'; start_distance: number; end_distance: number; direction: number; will_take: number }
-  | { type: 'StepDown400'; start_distance: number; end_distance: number; direction: number; should_reset: number }
+  | { type: 'StepDown200'; start_distance: number; end_distance: number; direction: number; end_height: number }
+  | { type: 'StepUp400'; start_distance: number; end_distance: number; direction: number; end_height: number }
+  | { type: 'StepDown400'; start_distance: number; end_distance: number; direction: number; end_height: number }
+  | { type: 'StepUpR1'; step_target_x: number; step_target_y: number; step_target_yaw: number; direction: number }
   | { type: 'TakeSpear'; target_x: number; target_y: number; target_yaw: number; end_x: number; end_y: number; end_yaw: number }
   | { type: 'TakeSpearById'; spear_id: number; end_x: number; end_y: number; end_yaw: number }
   | { type: 'StoreKFS' }
@@ -73,4 +74,4 @@ export type Command =
   | { type: 'SetGripClaw'; claw_mode: number }
   | { type: 'SetGripPose'; arm_pos: number; turn_pos: number; claw_mode: number }
   | { type: 'SetGripPresetPose'; preset_id: number }
-  | { type: 'StepPose'; step_type: number; direction: number; step_height: number; param: number; step_target_x: number; step_target_y: number; step_target_yaw: number; end_x: number; end_y: number; end_yaw: number };
+  | { type: 'StepPose'; step_type: number; direction: number; step_height: number; final_height: number; step_target_x: number; step_target_y: number; step_target_yaw: number; end_x: number; end_y: number; end_yaw: number };

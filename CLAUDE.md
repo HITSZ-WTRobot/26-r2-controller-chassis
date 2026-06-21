@@ -64,10 +64,12 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 | Item | Value |
 |------|-------|
 | Frame header | `0xAA 0xBB` |
+| Byte order | Big-endian (高字节在前) for all multi-byte fields |
 | Control frame | 21 bytes (header2 + cmd1 + data12 + timestamp4 + crc2) |
 | Feedback frame | 22 bytes (header2 + timestamp4 + x2 + y2 + yaw2 + frontH2 + rearH2 + action2 + conn2 + crc2) |
 | CRC | CRC16-Modbus (poly=0x8005, reflected=0xA001, init=0xFFFF, refin=true, refout=true, xorout=0x0000) — LSB-first processing uses reflected poly 0xA001, no final reversal needed |
-| CRC scope | From `cmd` byte to end of `tx_timestamp` (excludes header and CRC) |
+| CRC scope (control) | From `cmd` byte to end of `tx_timestamp` (excludes header and CRC) |
+| CRC scope (feedback) | From `timestamp` to `connection_state` (excludes header and CRC) |
 
 ### Scaling Rules
 
@@ -79,16 +81,19 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 | Velocity vx/vy | `int16 = value_mps * 2000` |
 | Angular velocity wz | `int16 = value_degps * 100` |
 | Chassis height | `int16 = height_m * 2000` |
-| `xy_vmax / xy_amax` | `uint12 = value * 200` |
+| `xy_vmax / xy_amax` | `uint12 = value * 200` (packed into 6 bytes: `[a11:a4][a3:a0\|b11:b8][b7:b0][c11:c4][c3:c0\|d11:d8][d7:d0]`) |
 | `yaw_vmax / yaw_amax` | `uint12 = value` |
+| `SetChassisHeight v_max` | `uint16 = value * 1000` |
+| `SetChassisHeight a_max` | `uint16 = value * 100` |
+| `SetChassisHeight j_max` | `uint16` raw value |
 
-### Command List (0x01-0x43)
+### Command List (0x01-0x5F)
 
 | Cmd | Name | Data |
 |-----|------|------|
 | `0x01` | Ping | - |
 | `0x10` | StopChassis | - |
-| `0x11` | SetChassisHeight | chassisHeight, v_max, a_max, j_max, linkMode |
+| `0x11` | SetChassisHeight | chassisHeight, v_max(uint16*1000), a_max(uint16*100), j_max, linkMode(0=PreviousCurve,1=CurrentState) |
 | `0x12` | SlavePushChassisTrajectory | x, y, yaw, vx, vy, wz (固件保留，处理为空) |
 | `0x13` | SetMasterChassisTargetCurrentState | x, y, yaw, xy_vmax(uint12), xy_amax(uint12), yaw_vmax(uint12), yaw_amax(uint12) |
 | `0x14` | SetMasterChassisTargetPreviousCurve | same as 0x13 |
@@ -96,18 +101,20 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 | `0x16` | SetGripPose | arm_pos(deg*100), turn_pos(deg*100), clawMode(0=keep,1=open,2=close), reserve×3 |
 | `0x17` | SetGripPresetPose | presetId(0-6), reserve×5 |
 | `0x21` | LidarPosture | x, y, yaw, lidar_timestamp |
-| `0x30` | StepUp200 | startDist, endDist, direction, willTake |
-| `0x31` | StepUpResume | - |
-| `0x32` | StepDown200 | startDist, endDist, direction, shouldReset |
-| `0x33` | StepUp400 | startDist, endDist, direction, willTake |
-| `0x34` | StepDown400 | startDist, endDist, direction, shouldReset |
+| `0x30` | StepUp200 | startDist, endDist, direction, endHeight(0=Low 0.015m,1=High 0.205m internal target; +GroundingChassisHeight ~0.207m → feedback ~0.222m/~0.412m) |
+| `0x31` | StepUpResume | - (旧恢复命令，当前保留无动作) |
+| `0x32` | StepDown200 | startDist, endDist, direction, endHeight(same as 0x30) |
+| `0x33` | StepUp400 | startDist, endDist, direction, endHeight(same as 0x30) |
+| `0x34` | StepDown400 | startDist, endDist, direction, endHeight(same as 0x30) |
+| `0x35` | StepUpR1 | stepTarget(x,y,yaw), direction, reserve×2 (终点由下位机 UpR1EndRelativePos 配置常量生成，lift 目标高度固定 0.100m) |
 | `0x40` | TakeSpear | target(x,y,yaw), end(x,y,yaw) |
 | `0x41` | TakeSpearById | spearId(0-5), end(x,y,yaw), reserve×2 |
 | `0x42` | StoreKFS | - |
 | `0x43` | ReleaseKFS | - |
 | `0x44` | SetGripSuction | on(uint16), reserve×5 |
 | `0x45` | SetAbdomenSuction | on(uint16), reserve×5 |
-| `0x50..0x5F` | StepPose | stepTarget(x,y,yaw), end(x,y,yaw), cmd低4位编码type/dir/height/param |
+| `0x46` | SetGripClaw | clawMode(0=open,1=close), reserve×5 |
+| `0x50..0x5F` | StepPose | stepTarget(x,y,yaw), end(x,y,yaw), cmd低4位编码type/dir/height/finalHeight |
 
 ### SetGripPresetPose Presets
 
@@ -126,9 +133,31 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 - `timestamp`: u32, HAL_GetTick()
 - `x, y`: int16 / 2000 → meters
 - `yaw`: int16 / 100 → degrees
-- `frontHeight, rearHeight`: int16 / 2000 → meters
-- `action_state`: bitfield (StepStatus bit0-1, ChassisMode bit2-3, ChassisCurveFinished bit4, LiftStatus bit5-6, GripStatus bit7-9, GripSuctionHasObject bit10, InfraredReceiverState bit11-12)
-- `connection_state`: bitfield (wheel0-3, lift0-3, grip_arm, grip_turn, gyro_yaw, bit11=grip_suction_pressure, bit12=abdomen_suction_pressure(reserved), bit13 reserved, bit14=localization stream, bit15=upper_host link)
+- `frontHeight, rearHeight`: int16 / 2000 → meters (底盘离地高度，非 lift 原始行程；升降未启用时回退到接地默认高度)
+- `action_state`: bitfield (StepStatus bit0-1, ChassisMode bit2-3, ChassisCurveFinished bit4, LiftStatus bit5-6, GripStatus bit7-9, GripSuctionHasObject bit10, InfraredReceiverState bit11-12, Reserved bit13-15)
+- `connection_state`: bitfield (wheel0-3, lift0-3, grip_arm, grip_turn, gyro_yaw, bit11=grip_suction_pressure, bit12=abdomen_suction_pressure, bit13 reserved, bit14=localization stream, bit15=upper_host link)
+
+### ConnectionState CAN Bus Mapping
+
+| Bit | Name | CAN Bus / ID |
+|-----|------|-------------|
+| `0` | `wheel[0]` | CAN1, id1=1 (前) |
+| `1` | `wheel[1]` | CAN1, id1=2 (前) |
+| `2` | `wheel[2]` | CAN2, id1=3 (后) |
+| `3` | `wheel[3]` | CAN2, id1=4 (后) |
+| `4` | `lift[0]` | CAN1, id1=3 (前) |
+| `5` | `lift[1]` | CAN1, id1=4 (前) |
+| `6` | `lift[2]` | CAN2, id1=1 (后) |
+| `7` | `lift[3]` | CAN2, id1=2 (后) |
+
+### InfraredReceiverState Values (bit11-12)
+
+| Value | Byte | Enum | Meaning |
+|-------|------|------|---------|
+| `0` | `0xA0` | KeepAlive | 仅作连接保活 |
+| `1` | `0xA1` | DockingComplete | 对接完成；状态从 0xA0 切换到 0xA1 时执行一次 `Grip::openClaw()`，随后延时回收到红外对接释放姿态 |
+| `2` | `0xA2` | NoAction | 无附加执行 |
+| `3` | `0xA3` | Reserved | 预留状态 |
 
 ### GripStatus Values (bit7-9)
 
@@ -146,7 +175,7 @@ This application controls the Robocon 2026 independent lift mecanum chassis (STM
 1. CRC 校验通过后立即执行命令，不再保留"前 49 帧仅对时"预热窗口
 2. bit14 (localization stream) requires valid LidarPosture from main upper-host link with stable time sync; watchdog timeout at 200 ticks
 3. bit15 (upper_host) indicates UART link status
-4. TakeSpear requires end_pos x-distance > 0.20m from target (SafeDistance)
+4. TakeSpear requires end_pos x-distance > 0.25m from target (SafeDistance, 固件当前值)
 5. SetGripPose/SetGripPresetPose only effective when `PROJECT_PART_ENABLE_PC_CONTROL=1` and `PROJECT_PART_ENABLE_GRIP=1`
 
 ### Backend Modules

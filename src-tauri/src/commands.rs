@@ -13,14 +13,15 @@ pub enum Command {
     SetGripPose { arm_pos: f32, turn_pos: f32, claw_mode: u16 },
     SetGripPresetPose { preset_id: u16 },
     LidarPosture { x: f32, y: f32, yaw: f32, lidar_timestamp: u32 },
-    StepUp200 { start_distance: f32, end_distance: f32, direction: u16, will_take: u16 },
+    StepUp200 { start_distance: f32, end_distance: f32, direction: u16, end_height: u16 },
     StepUpResume,
-    StepDown200 { start_distance: f32, end_distance: f32, direction: u16, should_reset: u16 },
-    StepUp400 { start_distance: f32, end_distance: f32, direction: u16, will_take: u16 },
-    StepDown400 { start_distance: f32, end_distance: f32, direction: u16, should_reset: u16 },
+    StepDown200 { start_distance: f32, end_distance: f32, direction: u16, end_height: u16 },
+    StepUp400 { start_distance: f32, end_distance: f32, direction: u16, end_height: u16 },
+    StepDown400 { start_distance: f32, end_distance: f32, direction: u16, end_height: u16 },
+    StepUpR1 { step_target_x: f32, step_target_y: f32, step_target_yaw: f32, direction: u16 },
     TakeSpear { target_x: f32, target_y: f32, target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32 },
     TakeSpearById { spear_id: u16, end_x: f32, end_y: f32, end_yaw: f32 },
-    StepPose { step_type: u8, direction: u8, step_height: u8, param: u8, step_target_x: f32, step_target_y: f32, step_target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32 },
+    StepPose { step_type: u8, direction: u8, step_height: u8, final_height: u8, step_target_x: f32, step_target_y: f32, step_target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32 },
     StoreKFS,
     ReleaseKFS,
     SetGripSuction { on: u16 },
@@ -140,14 +141,14 @@ impl Command {
                 };
                 frame.encode()
             }
-            Command::StepUp200 { start_distance, end_distance, direction, will_take } => {
+            Command::StepUp200 { start_distance, end_distance, direction, end_height } => {
                 let mut data = [0u8; 12];
                 let sd = (start_distance * 2000.0) as i16;
                 let ed = (end_distance * 2000.0) as i16;
                 data[0..2].copy_from_slice(&sd.to_be_bytes());
                 data[2..4].copy_from_slice(&ed.to_be_bytes());
                 data[4..6].copy_from_slice(&direction.to_be_bytes());
-                data[6..8].copy_from_slice(&will_take.to_be_bytes());
+                data[6..8].copy_from_slice(&end_height.to_be_bytes());
                 let frame = CommandFrame {
                     cmd: 0x30,
                     data,
@@ -155,14 +156,14 @@ impl Command {
                 };
                 frame.encode()
             }
-            Command::StepUp400 { start_distance, end_distance, direction, will_take } => {
+            Command::StepUp400 { start_distance, end_distance, direction, end_height } => {
                 let mut data = [0u8; 12];
                 let sd = (start_distance * 2000.0) as i16;
                 let ed = (end_distance * 2000.0) as i16;
                 data[0..2].copy_from_slice(&sd.to_be_bytes());
                 data[2..4].copy_from_slice(&ed.to_be_bytes());
                 data[4..6].copy_from_slice(&direction.to_be_bytes());
-                data[6..8].copy_from_slice(&will_take.to_be_bytes());
+                data[6..8].copy_from_slice(&end_height.to_be_bytes());
                 let frame = CommandFrame {
                     cmd: 0x33,
                     data,
@@ -178,14 +179,14 @@ impl Command {
                 };
                 frame.encode()
             }
-            Command::StepDown200 { start_distance, end_distance, direction, should_reset } => {
+            Command::StepDown200 { start_distance, end_distance, direction, end_height } => {
                 let mut data = [0u8; 12];
                 let sd = (start_distance * 2000.0) as i16;
                 let ed = (end_distance * 2000.0) as i16;
                 data[0..2].copy_from_slice(&sd.to_be_bytes());
                 data[2..4].copy_from_slice(&ed.to_be_bytes());
                 data[4..6].copy_from_slice(&direction.to_be_bytes());
-                data[6..8].copy_from_slice(&should_reset.to_be_bytes());
+                data[6..8].copy_from_slice(&end_height.to_be_bytes());
                 let frame = CommandFrame {
                     cmd: 0x32,
                     data,
@@ -193,16 +194,29 @@ impl Command {
                 };
                 frame.encode()
             }
-            Command::StepDown400 { start_distance, end_distance, direction, should_reset } => {
+            Command::StepDown400 { start_distance, end_distance, direction, end_height } => {
                 let mut data = [0u8; 12];
                 let sd = (start_distance * 2000.0) as i16;
                 let ed = (end_distance * 2000.0) as i16;
                 data[0..2].copy_from_slice(&sd.to_be_bytes());
                 data[2..4].copy_from_slice(&ed.to_be_bytes());
                 data[4..6].copy_from_slice(&direction.to_be_bytes());
-                data[6..8].copy_from_slice(&should_reset.to_be_bytes());
+                data[6..8].copy_from_slice(&end_height.to_be_bytes());
                 let frame = CommandFrame {
                     cmd: 0x34,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::StepUpR1 { step_target_x, step_target_y, step_target_yaw, direction } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&scale_x(*step_target_x).to_be_bytes());
+                data[2..4].copy_from_slice(&scale_y(*step_target_y).to_be_bytes());
+                data[4..6].copy_from_slice(&scale_yaw(*step_target_yaw).to_be_bytes());
+                data[6..8].copy_from_slice(&direction.to_be_bytes());
+                let frame = CommandFrame {
+                    cmd: 0x35,
                     data,
                     tx_timestamp: timestamp,
                 };
@@ -237,8 +251,8 @@ impl Command {
                 };
                 frame.encode()
             }
-            Command::StepPose { step_type, direction, step_height, param, step_target_x, step_target_y, step_target_yaw, end_x, end_y, end_yaw } => {
-                let cmd = 0x50 | (step_type << 3) | (direction << 2) | (step_height << 1) | param;
+            Command::StepPose { step_type, direction, step_height, final_height, step_target_x, step_target_y, step_target_yaw, end_x, end_y, end_yaw } => {
+                let cmd = 0x50 | (step_type << 3) | (direction << 2) | (step_height << 1) | final_height;
                 let mut data = [0u8; 12];
                 data[0..2].copy_from_slice(&scale_x(*step_target_x).to_be_bytes());
                 data[2..4].copy_from_slice(&scale_y(*step_target_y).to_be_bytes());

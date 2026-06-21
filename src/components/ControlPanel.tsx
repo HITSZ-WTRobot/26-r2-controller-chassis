@@ -3,8 +3,8 @@ import { useCommand } from '../hooks/useSerial';
 import { VerticalSlider } from './VerticalSlider';
 import type { RobotState } from '../types/robot';
 
-const HEIGHT_MIN = 0.195;
-const HEIGHT_MAX = 0.595;
+const HEIGHT_MIN = 0.207;
+const HEIGHT_MAX = 0.6152;
 const HEIGHT_STEP = 0.005;
 const LINK_MODE_PREVIOUS_CURVE = 2;
 const SEND_THROTTLE_MS = 40;
@@ -205,17 +205,16 @@ export function StepControl() {
   const [endDist, setEndDist] = useState(0.5);
   const [direction, setDirection] = useState(0);
   const [stepHeight, setStepHeight] = useState<'200mm' | '400mm'>('200mm');
-  const [willTake, setWillTake] = useState(false);
-  const [shouldReset, setShouldReset] = useState(true);
+  const [endHeight, setEndHeight] = useState(0);
 
   const handleStepUp = async () => {
     const type = stepHeight === '200mm' ? 'StepUp200' : 'StepUp400';
-    await send({ type, start_distance: startDist, end_distance: endDist, direction, will_take: willTake ? 1 : 0 });
+    await send({ type, start_distance: startDist, end_distance: endDist, direction, end_height: endHeight });
   };
 
   const handleStepDown = async () => {
     const type = stepHeight === '200mm' ? 'StepDown200' : 'StepDown400';
-    await send({ type, start_distance: startDist, end_distance: endDist, direction, should_reset: shouldReset ? 1 : 0 });
+    await send({ type, start_distance: startDist, end_distance: endDist, direction, end_height: endHeight });
   };
 
   const handleStepUpResume = async () => {
@@ -250,42 +249,17 @@ export function StepControl() {
             ]}
           />
         </div>
-        <label className="flex items-center gap-1.5 text-sm text-text-secondary cursor-pointer select-none">
-          <span>中途取卷轴 (will_take)</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={willTake}
-            onClick={() => setWillTake(!willTake)}
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-              willTake ? 'bg-primary' : 'bg-gray-500'
-            }`}
-          >
-            <span
-              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                willTake ? 'translate-x-[1.125rem]' : 'translate-x-0.5'
-              }`}
-            />
-          </button>
-        </label>
-        <label className="flex items-center gap-1.5 text-sm text-text-secondary cursor-pointer select-none">
-          <span>下台阶后恢复高度 (should_reset)</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={shouldReset}
-            onClick={() => setShouldReset(!shouldReset)}
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-              shouldReset ? 'bg-primary' : 'bg-gray-500'
-            }`}
-          >
-            <span
-              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                shouldReset ? 'translate-x-[1.125rem]' : 'translate-x-0.5'
-              }`}
-            />
-          </button>
-        </label>
+        <div>
+          <label className="text-sm text-text-secondary block mb-0.5">动作结束后底盘高度</label>
+          <RadioGroup
+            value={endHeight}
+            onChange={setEndHeight}
+            options={[
+              { value: 0, label: 'Low (0.22m)' },
+              { value: 1, label: 'High (0.42m)' },
+            ]}
+          />
+        </div>
       </div>
       <div className="grid grid-cols-3 gap-1.5">
         <button
@@ -311,12 +285,73 @@ export function StepControl() {
   );
 }
 
+export function StepUpR1Control() {
+  const { send } = useCommand();
+  const [stepTargetX, setStepTargetX] = useState(0);
+  const [stepTargetY, setStepTargetY] = useState(0);
+  const [stepTargetYaw, setStepTargetYaw] = useState(0);
+  const [direction, setDirection] = useState(0);
+
+  const handleSend = async () => {
+    try {
+      await send({
+        type: 'StepUpR1',
+        step_target_x: stepTargetX,
+        step_target_y: stepTargetY,
+        step_target_yaw: stepTargetYaw,
+        direction,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-text">R1 台阶 (StepUpR1 0x35)</h3>
+
+      <div>
+        <label className="text-sm text-text-secondary block mb-0.5">方向</label>
+        <RadioGroup
+          value={direction}
+          onChange={setDirection}
+          options={[
+            { value: 0, label: '前进' },
+            { value: 1, label: '后退' },
+          ]}
+        />
+      </div>
+
+      <div>
+        <label className="text-sm text-text-secondary block mb-0.5">台阶作业点 (世界系)</label>
+        <div className="grid grid-cols-3 gap-1.5">
+          <NumField label="X (m)" step={0.01} value={stepTargetX} onChange={setStepTargetX} />
+          <NumField label="Y (m)" step={0.01} value={stepTargetY} onChange={setStepTargetY} />
+          <NumField label="Yaw (°)" step={0.1} value={stepTargetYaw} onChange={setStepTargetYaw} />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleSend}
+        className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full"
+      >
+        发送 StepUpR1
+      </button>
+
+      <p className="text-xs text-text-secondary">
+        终点由下位机内部配置常量 (UpR1EndRelativePos) 相对 stepTargetPos 生成，结束 lift 目标高度固定为 0.100m
+      </p>
+    </div>
+  );
+}
+
 export function StepPoseControl() {
   const { send } = useCommand();
   const [stepType, setStepType] = useState(0);
   const [direction, setDirection] = useState(0);
   const [stepHeight, setStepHeight] = useState(0);
-  const [param, setParam] = useState(0);
+  const [finalHeight, setFinalHeight] = useState(0);
   const [stepTargetX, setStepTargetX] = useState(0);
   const [stepTargetY, setStepTargetY] = useState(0);
   const [stepTargetYaw, setStepTargetYaw] = useState(0);
@@ -331,7 +366,7 @@ export function StepPoseControl() {
         step_type: stepType,
         direction,
         step_height: stepHeight,
-        param,
+        final_height: finalHeight,
         step_target_x: stepTargetX,
         step_target_y: stepTargetY,
         step_target_yaw: stepTargetYaw,
@@ -383,27 +418,15 @@ export function StepPoseControl() {
           />
         </div>
         <div>
-          <label className="text-sm text-text-secondary block mb-0.5">
-            {stepType === 0 ? '中途取卷轴' : '下台后恢复高度'}
-          </label>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={param !== 0}
-            onClick={() => setParam(param ? 0 : 1)}
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-              param ? 'bg-primary' : 'bg-gray-500'
-            }`}
-          >
-            <span
-              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                param ? 'translate-x-[1.125rem]' : 'translate-x-0.5'
-              }`}
-            />
-          </button>
-          <span className="text-xs text-text-secondary ml-1.5">
-            {stepType === 0 ? (param ? 'will_take=1' : 'will_take=0') : (param ? 'should_reset=1' : 'should_reset=0')}
-          </span>
+          <label className="text-sm text-text-secondary block mb-0.5">动作结束后底盘高度</label>
+          <RadioGroup
+            value={finalHeight}
+            onChange={setFinalHeight}
+            options={[
+              { value: 0, label: 'Low (0.22m)' },
+              { value: 1, label: 'High (0.42m)' },
+            ]}
+          />
         </div>
       </div>
 
