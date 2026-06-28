@@ -99,6 +99,7 @@ cmd!(ping, Ping);
 cmd!(stop_chassis, StopChassis);
 cmd!(set_chassis_height, SetChassisHeight, height: f32, v_max: f32, a_max: f32, j_max: f32, link_mode: u16);
 cmd!(set_master_chassis_target_current_state, SetMasterChassisTargetCurrentState, x: f32, y: f32, yaw: f32, xy_vmax: f32, xy_amax: f32, yaw_vmax: f32, yaw_amax: f32);
+cmd!(set_master_chassis_target_previous_curve, SetMasterChassisTargetPreviousCurve, x: f32, y: f32, yaw: f32, xy_vmax: f32, xy_amax: f32, yaw_vmax: f32, yaw_amax: f32);
 cmd!(set_master_chassis_velocity, SetMasterChassisVelocity, vx: f32, vy: f32, wz: f32);
 cmd!(send_lidar_posture, LidarPosture, x: f32, y: f32, yaw: f32, lidar_timestamp: u32);
 cmd!(step_up200, StepUp200, start_distance: f32, end_distance: f32, direction: u16, end_height: u16);
@@ -107,10 +108,12 @@ cmd!(step_down200, StepDown200, start_distance: f32, end_distance: f32, directio
 cmd!(step_up400, StepUp400, start_distance: f32, end_distance: f32, direction: u16, end_height: u16);
 cmd!(step_down400, StepDown400, start_distance: f32, end_distance: f32, direction: u16, end_height: u16);
 cmd!(step_up_r1, StepUpR1, step_target_x: f32, step_target_y: f32, step_target_yaw: f32, direction: u16);
+cmd!(step_up_r1_direct, StepUpR1Direct, direction: u16);
 cmd!(take_spear, TakeSpear, target_x: f32, target_y: f32, target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32);
 cmd!(take_spear_by_id, TakeSpearById, spear_id: u16, end_x: f32, end_y: f32, end_yaw: f32);
 cmd!(set_grip_pose, SetGripPose, arm_pos: f32, turn_pos: f32, claw_mode: u16);
 cmd!(set_grip_preset_pose, SetGripPresetPose, preset_id: u16);
+cmd!(start_offline_trajectory, StartOfflineTrajectory, traj_id: u16, mirror: u16);
 cmd!(store_kfs, StoreKFS);
 cmd!(release_kfs, ReleaseKFS);
 cmd!(set_grip_suction, SetGripSuction, on: u16);
@@ -158,6 +161,7 @@ pub fn run() {
             stop_chassis,
             set_chassis_height,
             set_master_chassis_target_current_state,
+            set_master_chassis_target_previous_curve,
             set_master_chassis_velocity,
             send_lidar_posture,
             step_up200,
@@ -166,6 +170,7 @@ pub fn run() {
             step_up400,
             step_down400,
             step_up_r1,
+            step_up_r1_direct,
             take_spear,
             take_spear_by_id,
             store_kfs,
@@ -175,6 +180,7 @@ pub fn run() {
             set_grip_claw,
             set_grip_pose,
             set_grip_preset_pose,
+            start_offline_trajectory,
             step_pose,
         ])
         .setup(|app| {

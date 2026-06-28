@@ -18,7 +18,9 @@ pub enum Command {
     StepDown200 { start_distance: f32, end_distance: f32, direction: u16, end_height: u16 },
     StepUp400 { start_distance: f32, end_distance: f32, direction: u16, end_height: u16 },
     StepDown400 { start_distance: f32, end_distance: f32, direction: u16, end_height: u16 },
+    StartOfflineTrajectory { traj_id: u16, mirror: u16 },
     StepUpR1 { step_target_x: f32, step_target_y: f32, step_target_yaw: f32, direction: u16 },
+    StepUpR1Direct { direction: u16 },
     TakeSpear { target_x: f32, target_y: f32, target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32 },
     TakeSpearById { spear_id: u16, end_x: f32, end_y: f32, end_yaw: f32 },
     StepPose { step_type: u8, direction: u8, step_height: u8, final_height: u8, step_target_x: f32, step_target_y: f32, step_target_yaw: f32, end_x: f32, end_y: f32, end_yaw: f32 },
@@ -128,6 +130,18 @@ impl Command {
                 };
                 frame.encode()
             }
+            Command::StartOfflineTrajectory { traj_id, mirror } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&traj_id.to_be_bytes());
+                data[2..4].copy_from_slice(&mirror.to_be_bytes());
+                // reserve0..reserve3 stay zero
+                let frame = CommandFrame {
+                    cmd: 0x18,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
             Command::LidarPosture { x, y, yaw, lidar_timestamp } => {
                 let mut data = [0u8; 12];
                 data[0..2].copy_from_slice(&scale_x(*x).to_be_bytes());
@@ -217,6 +231,17 @@ impl Command {
                 data[6..8].copy_from_slice(&direction.to_be_bytes());
                 let frame = CommandFrame {
                     cmd: 0x35,
+                    data,
+                    tx_timestamp: timestamp,
+                };
+                frame.encode()
+            }
+            Command::StepUpR1Direct { direction } => {
+                let mut data = [0u8; 12];
+                data[0..2].copy_from_slice(&direction.to_be_bytes());
+                // reserve0..reserve4 stay zero
+                let frame = CommandFrame {
+                    cmd: 0x36,
                     data,
                     tx_timestamp: timestamp,
                 };

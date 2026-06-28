@@ -306,6 +306,14 @@ export function StepUpR1Control() {
     }
   };
 
+  const handleR1Direct = async () => {
+    try {
+      await send({ type: 'StepUpR1Direct', direction });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-text">R1 台阶 (StepUpR1 0x35)</h3>
@@ -331,13 +339,22 @@ export function StepUpR1Control() {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={handleSend}
-        className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full"
-      >
-        发送 StepUpR1
-      </button>
+      <div className="grid grid-cols-2 gap-1.5">
+        <button
+          type="button"
+          onClick={handleSend}
+          className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full"
+        >
+          发送 StepUpR1
+        </button>
+        <button
+          type="button"
+          onClick={handleR1Direct}
+          className="bg-gray-500 text-white px-3 py-1.5 rounded hover:bg-gray-600 w-full"
+        >
+          R1 Direct (0x36)
+        </button>
+      </div>
 
       <p className="text-xs text-text-secondary">
         终点由下位机内部配置常量 (UpR1EndRelativePos) 相对 stepTargetPos 生成，结束 lift 目标高度固定为 0.100m
@@ -685,6 +702,8 @@ export function GripControl() {
 
 export function SystemControl() {
   const { send } = useCommand();
+  const [trajId, setTrajId] = useState(1);
+  const [mirror, setMirror] = useState(0);
 
   return (
     <div className="space-y-3">
@@ -701,6 +720,46 @@ export function SystemControl() {
           className="bg-danger text-white px-3 py-1.5 rounded hover:opacity-90"
         >
           紧急停止
+        </button>
+      </div>
+
+      {/* StartOfflineTrajectory (0x18) */}
+      <div className="border-t border-border pt-2 space-y-2">
+        <h4 className="text-sm font-semibold text-text">离线轨迹 (0x18)</h4>
+        <p className="text-xs text-text-secondary">
+          traj 1: (8.43,1.80,0°)→(11.25,2.50,-90°) ~5.4s<br />
+          traj 2: (8.43,3.00,0°)→(11.25,2.50,-90°) ~5.07s<br />
+          traj 3: (8.43,4.20,0°)→(11.25,2.50,-90°) ~4.61s<br />
+          均在 0.412m 高度下执行
+        </p>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-text-secondary">轨迹</label>
+          <RadioGroup
+            value={trajId}
+            onChange={setTrajId}
+            options={[
+              { value: 1, label: '1' },
+              { value: 2, label: '2' },
+              { value: 3, label: '3' },
+            ]}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-text-secondary">镜像</label>
+          <RadioGroup
+            value={mirror}
+            onChange={setMirror}
+            options={[
+              { value: 0, label: '正常' },
+              { value: 1, label: 'X轴镜像' },
+            ]}
+          />
+        </div>
+        <button
+          onClick={() => send({ type: 'StartOfflineTrajectory', traj_id: trajId, mirror })}
+          className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full"
+        >
+          启动离线轨迹
         </button>
       </div>
 
@@ -757,6 +816,23 @@ export function PostureControl({ state }: PostureControlProps) {
     try {
       await send({
         type: 'SetMasterChassisTargetCurrentState',
+        x,
+        y,
+        yaw,
+        xy_vmax: xyVmax,
+        xy_amax: xyAmax,
+        yaw_vmax: yawVmax,
+        yaw_amax: yawAmax,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSendPreviousCurve = async () => {
+    try {
+      await send({
+        type: 'SetMasterChassisTargetPreviousCurve',
         x,
         y,
         yaw,
@@ -835,13 +911,22 @@ export function PostureControl({ state }: PostureControlProps) {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={handleSend}
-        className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full"
-      >
-        发送位姿指令
-      </button>
+      <div className="grid grid-cols-2 gap-1.5">
+        <button
+          type="button"
+          onClick={handleSend}
+          className="bg-primary text-white px-3 py-1.5 rounded hover:bg-primary-hover w-full"
+        >
+          当前状态 (0x13)
+        </button>
+        <button
+          type="button"
+          onClick={handleSendPreviousCurve}
+          className="bg-gray-500 text-white px-3 py-1.5 rounded hover:bg-gray-600 w-full"
+        >
+          上条曲线 (0x14)
+        </button>
+      </div>
     </div>
   );
 }
